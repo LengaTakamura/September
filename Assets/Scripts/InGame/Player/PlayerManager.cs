@@ -216,16 +216,18 @@ namespace InGame.Player
             {
                 UpdateLockOn(input);
 
+                bool movementUpdated = false;
                 if (!IsStun && IsMovable && CurrentPlayerControlState == PlayerControlState.Normal)
                 {
                     // player movement に入力を与えて更新する_playerInputManager
                     _playerMovement.UpdateMovement(input.MoveDirection, input.Buttons.IsSet(PlayerButtons.Dash),
                         input.CameraYaw, input.Buttons.WasPressed(PreviousButtons, PlayerButtons.Jump), input.Buttons.WasPressed(PreviousButtons, PlayerButtons.Evasion), Runner.DeltaTime);
+                    movementUpdated = true;
                 }
 
                 // 乗車中は台車に移動を任せ、それ以外は接地・落下・速度を更新する。
                 if (!_rideTrackingActive)
-                    _playerMovement.MoveTick(Runner.DeltaTime);
+                    _playerMovement.MoveTick(Runner.DeltaTime, movementUpdated);
 
                 if (input.Buttons.WasPressed(PreviousButtons, PlayerButtons.Warp))
                 {

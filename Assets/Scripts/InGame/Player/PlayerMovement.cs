@@ -205,6 +205,7 @@ namespace InGame.Player
         public virtual void UpdateMovement(Vector2 moveInput, bool isDash, float cameraYaw, bool isJump, bool isEvasion, float deltaTime)
         {
             CheckGroundManual();
+            if (!DoingVault) AdsorptionOnGround();
 
             MoveDirection = GetMoveDirection(moveInput, cameraYaw);
 
@@ -234,8 +235,6 @@ namespace InGame.Player
                 _isDash = false;
             else
                 Move(moveDirection, isDash, cameraYaw, deltaTime);
-
-            AdsorptionOnGround();
         }
 
         private void StartEvasion()
@@ -255,7 +254,7 @@ namespace InGame.Player
         }
 
         /// <summary> 入力無関係のTick UpdateMovementとの呼び出し順序を確定させるためにManagerから呼ばれる </summary>
-        public virtual void MoveTick(float deltaTime)
+        public virtual void MoveTick(float deltaTime, bool groundPrepared = false)
         {
             if (_movementOverride != null && _movementOverride.TryOverrideMovement(this, deltaTime))
             {
@@ -267,7 +266,9 @@ namespace InGame.Player
                 return;
             }
 
-            CheckGroundManual();
+            // 入力処理で確定した接地面を速度適用まで使う。
+            // 入力がない Tick ではここで新たに探索する。
+            if (!groundPrepared) CheckGroundManual();
 
             //回避
             if (IsEvading) UpdateEvasion();
@@ -782,6 +783,8 @@ namespace InGame.Player
 
         private void CheckGroundManual()
         {
+            _isGround = false;
+            _groundGap = 0f;
             if (!TryProbeGround(out Vector3 normal, out float gap)) return;
 
             _isGround = true;
@@ -790,16 +793,8 @@ namespace InGame.Player
             _groundGap = gap;
         }
 
-        /// <summary> 立てる角度の面か </summary>
-        private bool IsWalkable(Vector3 normal) => Vector3.Angle(Vector3.up, normal) <= _groundSlopeThreshold;
-
         /// <summary>
-        /// 足裏から真下の地面を探索する
-        /// <para>
-        /// 足元中心のRaycastを優先し、現在立っている面の法線を取得する。
-        /// 下り始めなどRaycastが地面を見失った場合だけSphereCastで補完し、
-        /// 登り切りで前方の平地を先取りして移動方向が水平になることを防ぐ
-        /// </para>
+        /// 移動方向用の法線と、カプセルを食い込ませずに下降できる距離を取得する。
         /// </summary>
         /// <param name="normal">接地面の法線</param>
         /// <param name="gap">接地面までの下方向移動量</param>
@@ -811,47 +806,9 @@ namespace InGame.Player
 
         private bool TryProbeGround(float probeDistance, out Vector3 normal, out float gap)
         {
-            if (TryRaycastGround(probeDistance, out normal, out gap)) return true;
-            return TrySphereCastGround(probeDistance, out normal, out gap);
-        }
-
-        private bool TryRaycastGround(float probeDistance, out Vector3 normal, out float gap)
-        {
-            normal = Vector3.up;
-            gap = 0f;
-
-            Bounds bounds = _moveCapsuleCollider.bounds;
-            Vector3 rayOrigin = new(bounds.center.x, bounds.min.y + GroundProbeOffset, bounds.center.z);
-            if (!Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit rayHit, probeDistance, _groundLayer)) return false;
-            if (!IsWalkable(rayHit.normal)) return false;
-
-            float radius = Mathf.Min(bounds.extents.x, bounds.extents.z);
-            float normalY = Mathf.Max(rayHit.normal.y, Mathf.Epsilon);
-            float capsuleSlopeClearance = radius * (1f / normalY - 1f);
-            normal = rayHit.normal;
-            gap = Mathf.Max(0f, bounds.min.y - rayHit.point.y - capsuleSlopeClearance);
-            return true;
-        }
-
-        private bool TrySphereCastGround(float probeDistance, out Vector3 normal, out float gap)
-        {
-            normal = Vector3.up;
-            gap = 0f;
-
-            Bounds bounds = _moveCapsuleCollider.bounds;
-            float radius = Mathf.Min(bounds.extents.x, bounds.extents.z);
-            Vector3 sphereOrigin = new(bounds.center.x, bounds.min.y + radius + GroundProbeOffset, bounds.center.z);
-
-            if (!Physics.SphereCast(sphereOrigin, radius, Vector3.down, out RaycastHit sphereHit, probeDistance, _groundLayer)) return false;
-            if (sphereHit.distance <= 0f || !IsWalkable(sphereHit.normal)) return false;
-
-            float expectedContactHeight = bounds.min.y + radius * (1f - sphereHit.normal.y);
-            // 通常の斜面接触より高い位置へ当たった場合は、頂上の縁を先取りしたものとして除外する
-            if (sphereHit.point.y > expectedContactHeight + GroundSnapTolerance) return false;
-
-            normal = sphereHit.normal;
-            gap = Mathf.Max(0f, sphereHit.distance - GroundProbeOffset);
-            return true;
+            return PlayerGroundProbe.TryProbe(_moveCapsuleCollider, _groundLayer,
+                _groundSlopeThreshold, probeDistance, GroundProbeOffset, GroundSnapTolerance,
+                out normal, out gap);
         }
 
 
