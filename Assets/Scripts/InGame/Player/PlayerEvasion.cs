@@ -22,7 +22,7 @@ namespace InGame.Player
         /// <summary>
         /// 回避を開始できるなら state を更新して true を返す。
         /// </summary>
-        public bool TryStartEvasion(ref EvasionState state, Vector2 inputDirection, Vector3 currentForward, int currentTick, float tickDeltaTime)
+        public bool TryStartEvasion(ref EvasionState state, Vector2 inputDirection, Vector3 currentForward, int currentTick, float tickDeltaTime, int playerWeight)
         {
             if (state.IsEvading)
                 return false;
@@ -43,14 +43,16 @@ namespace InGame.Player
             moveDirection.y = 0f;
             moveDirection = moveDirection.normalized;
 
+            float distanceCoefficient = CalculateWeightCoefficient(playerWeight, _evasionData.WeightDistanceDecay);
+            float speedCoefficient = CalculateWeightCoefficient(playerWeight, _evasionData.WeightSpeedDecay);
             float turnProgress = Mathf.InverseLerp(0, _evasionData.InputAngle, Mathf.Abs(clampedAngle));
 
             state.IsEvading = true;
             state.StartTick = currentTick;
-            state.RollDuration = _evasionData.RollDuration;
+            state.RollDuration = _evasionData.RollDuration / speedCoefficient;
             // 向き変更がロールより長いと移動方向を向き切らないままロールが終わり、モーションの向きと実際の移動方向がずれる
-            state.TurnDuration = Mathf.Min(_evasionData.MaxTurnDuration * turnProgress, state.RollDuration);
-            state.RollDistance = _evasionData.RollDistance;
+            state.TurnDuration = Mathf.Min(_evasionData.MaxTurnDuration * turnProgress / speedCoefficient, state.RollDuration);
+            state.RollDistance = _evasionData.RollDistance * distanceCoefficient;
             state.MoveDirection = moveDirection;
             state.StartDirection = currentForward;
 
@@ -109,6 +111,12 @@ namespace InGame.Player
 
             float t = Mathf.Clamp01(ElapsedTime(in state, currentTick, tickDeltaTime) / state.RollDuration);
             return _evasionData.RollSpeedCurve.Evaluate(t);
+        }
+
+        /// <summary> 宝石所持数から、速度または距離用の重量係数を求める </summary>
+        private static float CalculateWeightCoefficient(int jewelryCount, float decayPerJewelry)
+        {
+            return Mathf.Max(0.01f, 1f - (jewelryCount * decayPerJewelry));
         }
     }
 }
