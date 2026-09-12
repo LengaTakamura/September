@@ -85,9 +85,9 @@ namespace September.InGame.Exhibit
 				IsFinished = true;
 				return;
 			}
-			
-			Debug.Log(_rb.linearVelocity);
-			var velocity = SetVelocity(Velocity, input.MoveDirection,
+
+			// 衝突を考慮するため、現速度から次の速度を計算
+			var velocity = SetVelocity(_rb.linearVelocity, input.MoveDirection,
 				input.DesiredLookDirection);
 			_rb.linearVelocity = velocity;
 
@@ -131,6 +131,8 @@ namespace September.InGame.Exhibit
 
 			var inputDirection = cameraForward * input.y + cameraRight * input.x;
 			var targetVelocity = inputDirection.normalized * _maxSpeed;
+			// 下降速度は別に設定するため、水平方向だけを加速する。
+			velocity.y = 0f;
 			velocity = Vector3.MoveTowards(velocity, targetVelocity, _acceleration * Time.fixedDeltaTime);
 			velocity.y = _gravity;
 			return velocity;
