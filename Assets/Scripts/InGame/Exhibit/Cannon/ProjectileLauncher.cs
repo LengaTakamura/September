@@ -27,6 +27,8 @@ namespace September.InGame.Exhibit
 		public Vector3 HitPosition => _linePositions[_lastPositionIndex];
 		public ReadOnlySpan<Vector3> LinePositions => _linePositions.AsSpan(0, _lastPositionIndex + 1);
 		public Vector3 HitNormal { get; private set; }
+		public bool IsHit { get; private set; }
+
 		[Networked] private ProjectileData CurrentProjectileData { get; set; }
 
 		public struct ProjectileData : INetworkStruct
@@ -111,12 +113,14 @@ namespace September.InGame.Exhibit
 					_linePositions[i] = hit.point;
 					_lastPositionIndex = i;
 					HitNormal = hit.normal;
+					IsHit = true;
 					return;
 				}
 			}
 
 			_lastPositionIndex = _linePositions.Length - 1;
 			HitNormal = Vector3.up;
+			IsHit = false;
 		}
 
 		[Rpc]

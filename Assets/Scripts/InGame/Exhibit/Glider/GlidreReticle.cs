@@ -13,6 +13,8 @@ namespace September.InGame.Exhibit.Glider
 		[SerializeField] private float _reticleRadius = 3;
 		[SerializeField] private float _aimPositionOffset = 0.2f;
 		private GameObject _reticleEffect;
+		private bool _reticleActive = false;
+
 		public void Init()
 		{
 			if(!_reticleEffect)
@@ -28,10 +30,20 @@ namespace September.InGame.Exhibit.Glider
 
 		public void Render()
 		{
+			if (!_reticleActive) return;
+
 			_launcher.BuildTrajectory();
-			_reticleEffect.transform.position =
-				_launcher.HitPosition + _launcher.HitNormal * _aimPositionOffset;
-			_reticleEffect.transform.up = _launcher.HitNormal;
+			if (_launcher.IsHit)
+			{
+				_reticleEffect.SetActive(true);
+				_reticleEffect.transform.position =
+					_launcher.HitPosition + _launcher.HitNormal * _aimPositionOffset;
+				_reticleEffect.transform.up = _launcher.HitNormal;
+			}
+			else
+			{
+				_reticleEffect.SetActive(false);
+			}
 		}
 
 		public void SetActive(bool active)
@@ -41,7 +53,8 @@ namespace September.InGame.Exhibit.Glider
 
 		public void AllClientEffectActive(bool active)
 		{
-			_reticleEffect?.SetActive(active);
+			_reticleActive = active;
+			_reticleEffect.SetActive(_reticleActive);
 		}
 	}
 }
