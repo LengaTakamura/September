@@ -22,7 +22,7 @@ namespace September.InGame.Exhibit
 		private ParticleSystem _explosionParticle;
 		private ParticleSystem _explosionGroundParticle;
 
-		public void Initialize()
+		public void Initialize(NetworkRunner runner)
 		{
 			_explosionParticle = Object.Instantiate(_explosionParticlePrefab);
 			_explosionParticle.transform.localScale = _effectScale;

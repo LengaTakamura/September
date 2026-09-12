@@ -27,6 +27,8 @@ namespace September.InGame.Exhibit
 		public Vector3 HitPosition => _linePositions[_lastPositionIndex];
 		public ReadOnlySpan<Vector3> LinePositions => _linePositions.AsSpan(0, _lastPositionIndex + 1);
 		public Vector3 HitNormal { get; private set; }
+		public bool IsHit { get; private set; }
+
 		[Networked] private ProjectileData CurrentProjectileData { get; set; }
 
 		public struct ProjectileData : INetworkStruct
@@ -37,13 +39,14 @@ namespace September.InGame.Exhibit
 			public Vector3 CurrentForward;
 			public Vector3 Gravity;
 			public float Timer;
+			public float LifeTime;
 			public NetworkBool HasHit;
 		}
 
 		public override void Spawned()
 		{
 			base.Spawned();
-			_projectileHitEffect.Initialize();
+			_projectileHitEffect.Initialize(Runner);
 			_linePositions = new Vector3[(int)(_lifeTime / _simulationStepTime)];
 			_effectSpawner = StaticServiceLocator.Instance.Get<EffectSpawner>();
 		}
@@ -60,8 +63,10 @@ namespace September.InGame.Exhibit
 				CurrentPosition = _projectileSpawnPoint.position,
 				Gravity = _gravity,
 				Timer = 0f,
+				LifeTime = _lifeTime,
 				HasHit = false
 			};
+			
 
 			Runner.Spawn(_projectilePrefab, _projectileSpawnPoint.position, _projectileSpawnPoint.rotation,
 				onBeforeSpawned: (runner, obj) =>
@@ -108,12 +113,14 @@ namespace September.InGame.Exhibit
 					_linePositions[i] = hit.point;
 					_lastPositionIndex = i;
 					HitNormal = hit.normal;
+					IsHit = true;
 					return;
 				}
 			}
 
 			_lastPositionIndex = _linePositions.Length - 1;
 			HitNormal = Vector3.up;
+			IsHit = false;
 		}
 
 		[Rpc]
@@ -143,7 +150,7 @@ namespace September.InGame.Exhibit
 
 	public interface IProjectileHitEffect
 	{
-		void Initialize();
+		void Initialize(NetworkRunner runner);
 
 		/// <summary>
 		///     ProjectileHit時に呼ばれるサーバ上でのゲームロジック処理
