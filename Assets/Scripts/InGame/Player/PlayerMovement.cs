@@ -170,7 +170,7 @@ namespace InGame.Player
         public bool IsEvading => Evasion.IsEvading;
         /// <summary> 回避を開始した Tick </summary>
         public int EvasionStartTick => Evasion.StartTick;
-        /// <summary> 回避全体の所要時間 (秒、重量係数適用後) </summary>
+        /// <summary> 回避全体の所要時間 (秒、重量による速度補正適用後) </summary>
         public float EvasionDuration => Evasion.RollDuration;
         [Networked] public bool IgnoreMoveInput { get; set; }
         [Networked] public bool IgnoreEvasionInput { get; set; }

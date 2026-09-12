@@ -43,15 +43,16 @@ namespace InGame.Player
             moveDirection.y = 0f;
             moveDirection = moveDirection.normalized;
 
-            float weightCoefficient = CalculateWeightCoefficient(playerWeight);
+            float distanceCoefficient = CalculateWeightCoefficient(playerWeight, _evasionData.WeightDistanceDecay);
+            float speedCoefficient = CalculateWeightCoefficient(playerWeight, _evasionData.WeightSpeedDecay);
             float turnProgress = Mathf.InverseLerp(0, _evasionData.InputAngle, Mathf.Abs(clampedAngle));
 
             state.IsEvading = true;
             state.StartTick = currentTick;
-            state.RollDuration = _evasionData.RollDuration * weightCoefficient;
+            state.RollDuration = _evasionData.RollDuration / speedCoefficient;
             // 向き変更がロールより長いと移動方向を向き切らないままロールが終わり、モーションの向きと実際の移動方向がずれる
-            state.TurnDuration = Mathf.Min(_evasionData.MaxTurnDuration * turnProgress * weightCoefficient, state.RollDuration);
-            state.RollDistance = _evasionData.RollDistance * weightCoefficient;
+            state.TurnDuration = Mathf.Min(_evasionData.MaxTurnDuration * turnProgress / speedCoefficient, state.RollDuration);
+            state.RollDistance = _evasionData.RollDistance * distanceCoefficient;
             state.MoveDirection = moveDirection;
             state.StartDirection = currentForward;
 
@@ -112,10 +113,10 @@ namespace InGame.Player
             return _evasionData.RollSpeedCurve.Evaluate(t);
         }
 
-        /// <summary> 重み係数計算 </summary>
-        private float CalculateWeightCoefficient(int jewelryCount)
+        /// <summary> 宝石所持数から、速度または距離用の重量係数を求める </summary>
+        private static float CalculateWeightCoefficient(int jewelryCount, float decayPerJewelry)
         {
-            return 1f - (jewelryCount * _evasionData.WeightDecay);
+            return Mathf.Max(0.01f, 1f - (jewelryCount * decayPerJewelry));
         }
     }
 }
