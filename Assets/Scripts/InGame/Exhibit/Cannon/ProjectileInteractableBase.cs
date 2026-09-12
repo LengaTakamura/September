@@ -47,24 +47,39 @@ namespace September.InGame.Exhibit
 		[OnChangedRender(nameof(AmmoChanged))]
 		private int CurrentAmmo { get; set; }
 
+		private bool _isSpawned;
+
 		public override void Spawned()
 		{
 			base.Spawned();
 			_launcher = GetComponent<ProjectileLauncher>();
 			_move = GetComponent<IProjectileMovement>();
 			_reticleEffect?.Init();
+			_isSpawned = true;
+		}
+
+		public override void Despawned(NetworkRunner runner, bool hasState)
+		{
+			_isSpawned = false;
 		}
 
 		public override void Render()
 		{
 			base.Render();
 			_move?.Render();
-			_reticleEffect?.Render();
 
 			if (_animationClipPlayer && !_animationClipPlayer.IsPlayingTargetClip(_playerUseAnimationClip))
 			{
 				_animationClipPlayer.PlayClip(_playerUseAnimationClip);
 			}
+		}
+
+		private void LateUpdate()
+		{
+			if (!_isSpawned) return;
+
+			// NetworkRigidbodyが諸々のTransformを動かした後に描画する必要があるため、LateUpdateで呼び出す（Renderの後）
+			_reticleEffect?.Render();
 		}
 
 		public override void FixedUpdateNetwork()
