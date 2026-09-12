@@ -28,13 +28,20 @@ namespace InGame.Player
             bool hasRayGround = Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit rayHit,
                 probeDistance, groundLayer, QueryTriggerInteraction.Ignore)
                 && IsWalkable(rayHit.normal, slopeThreshold);
+            // 球の距離が不明な場合でも、足元の面へ既に接していることだけは確認できる。
+            // この代替判定の距離を吸着量として使うと、坂と平地の境界へ食い込む。
+            float rayClearance = hasRayGround
+                ? radius * (1f / Mathf.Max(rayHit.normal.y, Mathf.Epsilon) - 1f)
+                : 0f;
+            bool hasRayContact = hasRayGround
+                && bottom.y - rayHit.point.y - rayClearance <= snapTolerance;
 
             // 開始球が重なっている場合、Cast の距離では安全な下降量を求められない。
-            // 中心レイの接地判定だけを利用し、吸着はしない。
+            // 中心レイが接触距離内の場合だけ接地とし、吸着はしない。
             if (Physics.CheckSphere(sphereOrigin, radius, groundLayer, QueryTriggerInteraction.Ignore))
             {
-                if (hasRayGround) normal = rayHit.normal;
-                return hasRayGround;
+                if (hasRayContact) normal = rayHit.normal;
+                return hasRayContact;
             }
 
             bool hasSphereHit = Physics.SphereCast(sphereOrigin, radius, Vector3.down,
@@ -48,7 +55,9 @@ namespace InGame.Player
                 // 距離はカプセル下半球の実接触から求める。平地と坂を跨いでいても、
                 // 中心レイの平地へ押し下げたり、斜面を無限平面と見なして浮かせたりしない。
                 normal = rayHit.normal;
-                if (hasSphereGround) gap = Mathf.Max(0f, sphereHit.distance - probeOffset);
+                // 遠い面にレイだけが当たった場合、未知の球の距離を gap=0 と見なさない。
+                if (!hasSphereGround) return hasRayContact;
+                gap = Mathf.Max(0f, sphereHit.distance - probeOffset);
                 return true;
             }
 

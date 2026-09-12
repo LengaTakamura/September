@@ -78,11 +78,11 @@ namespace InGame.Player
         [Networked] private float GroundedGraceRemaining { get; set; }
         private float _prevGroundedTime;
         [Networked] private Vector3 NetworkedGroundNormal { get; set; } = Vector3.up;
-        /// <summary> カプセルを接地面へ吸着させるための下方向移動量 </summary>
+        /// <summary> この Tick の速度にだけ含める接地面までの下方向補正量 </summary>
         private float _groundGap;
         /// <summary> 接地判定・吸着の探索開始オフセット。足裏からこの高さで探索を始める </summary>
         private const float GroundProbeOffset = 0.1f;
-        /// <summary> この値以下の浮きは吸着しない。毎Tickの微小な上下でガタつかせないため </summary>
+        /// <summary> 空中から接地として受け入れる接触距離。補正のデッドゾーンには使わない </summary>
         private const float GroundSnapTolerance = 0.02f;
         private bool _isDashCoolTime;
         private bool CanDash => !_isDashCoolTime && _status.CurrentStamina > 0 && IsGround;
@@ -204,8 +204,7 @@ namespace InGame.Player
 
         public virtual void UpdateMovement(Vector2 moveInput, bool isDash, float cameraYaw, bool isJump, bool isEvasion, float deltaTime)
         {
-            CheckGroundManual();
-            if (!DoingVault) AdsorptionOnGround();
+            PrepareGroundMovement(deltaTime);
 
             MoveDirection = GetMoveDirection(moveInput, cameraYaw);
 
@@ -268,7 +267,7 @@ namespace InGame.Player
 
             // 入力処理で確定した接地面を速度適用まで使う。
             // 入力がない Tick ではここで新たに探索する。
-            if (!groundPrepared) CheckGroundManual();
+            if (!groundPrepared) PrepareGroundMovement(deltaTime);
 
             //回避
             if (IsEvading) UpdateEvasion();
@@ -279,14 +278,18 @@ namespace InGame.Player
             {
                 transform.position = _teleportTarget.Value;
                 NetworkedMoveVelocity = Vector3.zero;
+                _groundGap = 0f;
                 _teleportTarget = null;
             }
 
             if (IsGround)
+                NetworkedAirMoveVelocity = NetworkedMoveVelocity;
+
+            // コヨーテタイムは入力の猶予。地面を離れた後の重力は止めない。
+            if (_isGround)
             {
                 NetworkedFallVelocity = Vector3.zero;
                 _prevGroundedTime = Runner.SimulationTime;
-                NetworkedAirMoveVelocity = NetworkedMoveVelocity;
             }
             else
             {
@@ -318,6 +321,7 @@ namespace InGame.Player
 
             if (_isGround) NetworkedMoveVelocity = Vector3.zero;
             _isGround = false;
+            _groundGap = 0f;
         }
 
         /// <summary> 回避中の 1 Tick 分の更新。Tick 基準なので予測・再シミュレーションでも同じ結果になる </summary>
@@ -487,38 +491,36 @@ namespace InGame.Player
             return result;
         }
 
-        /// <summary>
-        /// 足裏を地面へ吸着させる
-        /// <para>
-        /// 接地したまま足が浮いていると、ApplyVelocityがy速度を上書きして重力が効かず、
-        /// コヨーテタイムが切れるまで空中に留まってから落下する。下り坂ではこれが毎Tick起きて
-        /// 空中判定と着地を繰り返し、つっかえる。IsGroundで弾かず接地中も吸着させる
-        /// </para>
-        /// </summary>
-        void AdsorptionOnGround()
+        private void PrepareGroundMovement(float deltaTime)
         {
-            // ノックバック中と上方向へ飛ばされている間は引き戻さない
-            if (_knockBackActive || NetworkedFlyingVelocity.y > 0f) return;
-
-            if (_isGround)
+            CheckGroundManual();
+            if (DoingVault)
             {
-                // CheckGroundManualが測った浮き量へそのまま吸着する
-                if (_groundGap <= GroundSnapTolerance) return;
-
-                transform.position += Vector3.down * _groundGap;
                 _groundGap = 0f;
                 return;
             }
 
-            // 実接地していない場合は、接地判定より広い範囲を探して足元へ引き戻す
-            if (!TryProbeGround(_groundSnapDistance, out Vector3 normal, out float gap)) return;
+            PrepareGroundFollow(deltaTime);
+        }
 
-            if (gap > GroundSnapTolerance)
-                transform.position += Vector3.down * gap;
+        /// <summary> 地上移動から下りへ移る際に限り、次の物理ステップで地面へ追従する。 </summary>
+        private void PrepareGroundFollow(float deltaTime)
+        {
+            if (_isGround || GroundedGraceRemaining <= 0f || deltaTime <= 0f) return;
+            if (_knockBackActive || NetworkedFlyingVelocity.y > 0f) return;
+
+            // 空中の着地を広域探索で先取りしない。また、崖の下まで一気に引き寄せない。
+            float horizontalSpeed = new Vector2(NetworkVelocity.x, NetworkVelocity.z).magnitude;
+            float slopeAngle = Mathf.Clamp(_groundSlopeThreshold, 0f, 89f) * Mathf.Deg2Rad;
+            float followDistance = Mathf.Min(_groundSnapDistance,
+                GroundSnapTolerance + horizontalSpeed * deltaTime * Mathf.Tan(slopeAngle));
+            if (!TryProbeGround(_groundSnapDistance, out Vector3 normal, out float gap)) return;
+            if (gap > followDistance) return;
+
             _isGround = true;
             GroundedGraceRemaining = _coyoteTime;
             NetworkedGroundNormal = normal;
-            _groundGap = 0f;
+            _groundGap = gap;
         }
 
         protected virtual void ApplyVelocity(float deltaTime)
@@ -527,7 +529,12 @@ namespace InGame.Player
             {
                 if (_isGround)
                 {
-                    _rb.linearVelocity = NetworkedMoveVelocity + NetworkedFlyingVelocity;
+                    // 2cm まで浮かせてから座標を飛ばすのではなく、微小な浮きも速度で解消する。
+                    // 補正は空中慣性の NetworkedAirMoveVelocity へ持ち越さない。
+                    Vector3 groundCorrection = NetworkedFlyingVelocity.y <= 0f && deltaTime > 0f
+                        ? Vector3.down * (_groundGap / deltaTime)
+                        : Vector3.zero;
+                    _rb.linearVelocity = NetworkedMoveVelocity + NetworkedFlyingVelocity + groundCorrection;
                 }
                 else
                 {
@@ -640,6 +647,7 @@ namespace InGame.Player
         /// <summary> 乗り越え開始 </summary>
         void StartVault()
         {
+            _groundGap = 0f;
             _vaultTimer = 0;
             DoingVault = true;
             OnStartVault?.Invoke();
@@ -686,6 +694,7 @@ namespace InGame.Player
         public void ResetExternalGroundState()
         {
             _isGround = false;
+            _groundGap = 0f;
             GroundedGraceRemaining = 0f;
             NetworkedGroundNormal = Vector3.up;
         }
@@ -785,7 +794,10 @@ namespace InGame.Player
         {
             _isGround = false;
             _groundGap = 0f;
+            if (_knockBackActive) return;
             if (!TryProbeGround(out Vector3 normal, out float gap)) return;
+            // 地面が探索範囲にあるだけでは着地しない。落下中は接触付近まで進ませる。
+            if (gap > GroundSnapTolerance) return;
 
             _isGround = true;
             GroundedGraceRemaining = _coyoteTime;
