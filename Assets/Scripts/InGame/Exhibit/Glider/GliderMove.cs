@@ -192,11 +192,11 @@ namespace September.InGame.Exhibit
 		{
 			if (isRide)
 			{
-				player.BeginRideView(_playerPos, Vector3.zero);
+				player.BeginRideTracking(_playerPos, Vector3.zero);
 			}
 			else
 			{
-				player.EndRideView();
+				player.EndRideTracking();
 			}
 		}
 	}
