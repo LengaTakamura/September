@@ -78,17 +78,16 @@ namespace InGame.Player
         [Networked] private float GroundedGraceRemaining { get; set; }
         private float _prevGroundedTime;
         [Networked] private Vector3 NetworkedGroundNormal { get; set; } = Vector3.up;
-        /// <summary> カプセルを接地面へ吸着させるための下方向移動量 </summary>
+        /// <summary> この Tick の速度にだけ含める接地面までの下方向補正量 </summary>
         private float _groundGap;
         /// <summary> 接地判定・吸着の探索開始オフセット。足裏からこの高さで探索を始める </summary>
         private const float GroundProbeOffset = 0.1f;
-        /// <summary> この値以下の浮きは吸着しない。毎Tickの微小な上下でガタつかせないため </summary>
+        /// <summary> 空中から接地として受け入れる接触距離。補正のデッドゾーンには使わない </summary>
         private const float GroundSnapTolerance = 0.02f;
         private bool _isDashCoolTime;
         private bool CanDash => !_isDashCoolTime && _status.CurrentStamina > 0 && IsGround;
         private bool _isDash;
         // vault
-        private bool _doingVault;
         // Roll
         private PlayerEvasion _playerEvasion;
         /// <summary> 回避の同期状態。Tick 基準なので入力権限側の予測でも決定的に再計算できる </summary>
@@ -147,7 +146,12 @@ namespace InGame.Player
         [Networked] public Vector2 MoveDirection { get; private set; }
         private bool _isHookFollow;
         private Transform _hookTarget;
-        private float _vaultTimer;
+        [Networked] private int VaultStartTick { get; set; }
+        [Networked] private float VaultDuration { get; set; }
+        [Networked] private Vector3 VaultStartPosition { get; set; }
+        [Networked] private Vector3 VaultTopPosition { get; set; }
+        [Networked] private Vector3 VaultEndPosition { get; set; }
+        // Editor Gizmo 用。Tick 処理は上の Networked 状態だけを参照する。
         private Vector3 _vaultStartPos;
         private Vector3 _vaultTopPos;
         private Vector3 _vaultEndPos;
@@ -163,6 +167,8 @@ namespace InGame.Player
         public bool IsGround => (_isGround || GroundedGraceRemaining > 0) && !_knockBackActive;
         [Networked, HideInInspector]
         public NetworkBool IsGroundNet { get; private set; }
+        /// <summary> 描画用の実接地。移動入力用のコヨーテタイムを含めない。 </summary>
+        [Networked] public NetworkBool IsGroundForAnimation { get; private set; }
         public Vector3 GroundNormal => NetworkedGroundNormal;
         public bool InfiniteStamina { get; set; } = false;
         public CapsuleCollider MoveCapsuleCollider => _moveCapsuleCollider;
@@ -204,7 +210,8 @@ namespace InGame.Player
 
         public virtual void UpdateMovement(Vector2 moveInput, bool isDash, float cameraYaw, bool isJump, bool isEvasion, float deltaTime)
         {
-            CheckGroundManual();
+            if (DoingVault) return;
+            PrepareGroundMovement(deltaTime);
 
             MoveDirection = GetMoveDirection(moveInput, cameraYaw);
 
@@ -234,8 +241,6 @@ namespace InGame.Player
                 _isDash = false;
             else
                 Move(moveDirection, isDash, cameraYaw, deltaTime);
-
-            AdsorptionOnGround();
         }
 
         private void StartEvasion()
@@ -255,10 +260,11 @@ namespace InGame.Player
         }
 
         /// <summary> 入力無関係のTick UpdateMovementとの呼び出し順序を確定させるためにManagerから呼ばれる </summary>
-        public virtual void MoveTick(float deltaTime)
+        public virtual void MoveTick(float deltaTime, bool groundPrepared = false)
         {
             if (_movementOverride != null && _movementOverride.TryOverrideMovement(this, deltaTime))
             {
+                DoingVault = false;
                 // 軌道移動中も描画用の接地状態を更新する。前Tickの接地を持ち越さない。
                 _isGround = false;
                 CheckGroundManual();
@@ -267,25 +273,43 @@ namespace InGame.Player
                 return;
             }
 
-            CheckGroundManual();
+            if (_teleportTarget.HasValue) DoingVault = false;
+            if (DoingVault)
+            {
+                if (UpdateVault(deltaTime))
+                {
+                    UpdateStamina(false, deltaTime);
+                    FinishGroundTick(deltaTime);
+                    return;
+                }
+
+                // 終了した Tick は軌道末尾で接地を取り直す。
+                groundPrepared = false;
+            }
+
+            // 入力処理で確定した接地面を速度適用まで使う。
+            // 入力がない Tick ではここで新たに探索する。
+            if (!groundPrepared) PrepareGroundMovement(deltaTime);
 
             //回避
             if (IsEvading) UpdateEvasion();
-
-            if (DoingVault && HasStateAuthority) UpdateVault(deltaTime);
 
             if (_teleportTarget.HasValue)
             {
                 transform.position = _teleportTarget.Value;
                 NetworkedMoveVelocity = Vector3.zero;
+                _groundGap = 0f;
                 _teleportTarget = null;
             }
 
             if (IsGround)
+                NetworkedAirMoveVelocity = NetworkedMoveVelocity;
+
+            // コヨーテタイムは入力の猶予。地面を離れた後の重力は止めない。
+            if (_isGround)
             {
                 NetworkedFallVelocity = Vector3.zero;
                 _prevGroundedTime = Runner.SimulationTime;
-                NetworkedAirMoveVelocity = NetworkedMoveVelocity;
             }
             else
             {
@@ -309,6 +333,9 @@ namespace InGame.Player
 
         private void FinishGroundTick(float deltaTime)
         {
+            // 入力権限側も予測し、描画開始をホストの通知待ちにしない。
+            if (HasStateAuthority || HasInputAuthority)
+                IsGroundForAnimation = _isGround && !_knockBackActive;
             // is ground の管理
             if (!_isGround && GroundedGraceRemaining > 0)
                 GroundedGraceRemaining = Mathf.Max(0f, GroundedGraceRemaining - deltaTime);
@@ -317,6 +344,7 @@ namespace InGame.Player
 
             if (_isGround) NetworkedMoveVelocity = Vector3.zero;
             _isGround = false;
+            _groundGap = 0f;
         }
 
         /// <summary> 回避中の 1 Tick 分の更新。Tick 基準なので予測・再シミュレーションでも同じ結果になる </summary>
@@ -486,38 +514,36 @@ namespace InGame.Player
             return result;
         }
 
-        /// <summary>
-        /// 足裏を地面へ吸着させる
-        /// <para>
-        /// 接地したまま足が浮いていると、ApplyVelocityがy速度を上書きして重力が効かず、
-        /// コヨーテタイムが切れるまで空中に留まってから落下する。下り坂ではこれが毎Tick起きて
-        /// 空中判定と着地を繰り返し、つっかえる。IsGroundで弾かず接地中も吸着させる
-        /// </para>
-        /// </summary>
-        void AdsorptionOnGround()
+        private void PrepareGroundMovement(float deltaTime)
         {
-            // ノックバック中と上方向へ飛ばされている間は引き戻さない
-            if (_knockBackActive || NetworkedFlyingVelocity.y > 0f) return;
-
-            if (_isGround)
+            CheckGroundManual();
+            if (DoingVault)
             {
-                // CheckGroundManualが測った浮き量へそのまま吸着する
-                if (_groundGap <= GroundSnapTolerance) return;
-
-                transform.position += Vector3.down * _groundGap;
                 _groundGap = 0f;
                 return;
             }
 
-            // 実接地していない場合は、接地判定より広い範囲を探して足元へ引き戻す
-            if (!TryProbeGround(_groundSnapDistance, out Vector3 normal, out float gap)) return;
+            PrepareGroundFollow(deltaTime);
+        }
 
-            if (gap > GroundSnapTolerance)
-                transform.position += Vector3.down * gap;
+        /// <summary> 地上移動から下りへ移る際に限り、次の物理ステップで地面へ追従する。 </summary>
+        private void PrepareGroundFollow(float deltaTime)
+        {
+            if (_isGround || GroundedGraceRemaining <= 0f || deltaTime <= 0f) return;
+            if (_knockBackActive || NetworkedFlyingVelocity.y > 0f) return;
+
+            // 空中の着地を広域探索で先取りしない。また、崖の下まで一気に引き寄せない。
+            float horizontalSpeed = new Vector2(NetworkVelocity.x, NetworkVelocity.z).magnitude;
+            float slopeAngle = Mathf.Clamp(_groundSlopeThreshold, 0f, 89f) * Mathf.Deg2Rad;
+            float followDistance = Mathf.Min(_groundSnapDistance,
+                GroundSnapTolerance + horizontalSpeed * deltaTime * Mathf.Tan(slopeAngle));
+            if (!TryProbeGround(_groundSnapDistance, out Vector3 normal, out float gap)) return;
+            if (gap > followDistance) return;
+
             _isGround = true;
             GroundedGraceRemaining = _coyoteTime;
             NetworkedGroundNormal = normal;
-            _groundGap = 0f;
+            _groundGap = gap;
         }
 
         protected virtual void ApplyVelocity(float deltaTime)
@@ -526,7 +552,12 @@ namespace InGame.Player
             {
                 if (_isGround)
                 {
-                    _rb.linearVelocity = NetworkedMoveVelocity + NetworkedFlyingVelocity;
+                    // 2cm まで浮かせてから座標を飛ばすのではなく、微小な浮きも速度で解消する。
+                    // 補正は空中慣性の NetworkedAirMoveVelocity へ持ち越さない。
+                    Vector3 groundCorrection = NetworkedFlyingVelocity.y <= 0f && deltaTime > 0f
+                        ? Vector3.down * (_groundGap / deltaTime)
+                        : Vector3.zero;
+                    _rb.linearVelocity = NetworkedMoveVelocity + NetworkedFlyingVelocity + groundCorrection;
                 }
                 else
                 {
@@ -639,27 +670,59 @@ namespace InGame.Player
         /// <summary> 乗り越え開始 </summary>
         void StartVault()
         {
-            _vaultTimer = 0;
+            _groundGap = 0f;
+            VaultStartTick = Runner.Tick;
+            VaultDuration = Mathf.Max(_timeToVault, Runner.DeltaTime);
+            VaultStartPosition = _vaultStartPos;
+            VaultTopPosition = _vaultTopPos;
+            VaultEndPosition = _vaultEndPos;
             DoingVault = true;
+            _isDash = false;
             OnStartVault?.Invoke();
             Stop();
         }
 
-        void UpdateVault(float deltaTime)
+        private bool UpdateVault(float deltaTime)
         {
-            Vector3 prevPos = transform.position;
+            float elapsed = (Runner.Tick - VaultStartTick) * deltaTime;
+            if (elapsed >= VaultDuration)
+            {
+                EndVault(NetworkedMoveVelocity);
+                return false;
+            }
 
-            _vaultTimer += deltaTime;
-            float t = _vaultTimer / _timeToVault;
-            Vector3 resPos = Vector3.Lerp(_vaultStartPos, _vaultEndPos, t);
-            float curveValue = _vaultCurve.Evaluate(t >= 0.5f ? 1 - (t - 0.5f) * 2 : t * 2);
-            resPos.y = Mathf.Lerp(t >= 0.5f ? _vaultEndPos.y : _vaultStartPos.y, _vaultTopPos.y, curveValue);
+            Vector3 currentTarget = EvaluateVaultPosition(elapsed / VaultDuration);
+            Vector3 nextTarget = EvaluateVaultPosition((elapsed + deltaTime) / VaultDuration);
 
-            transform.position = resPos;
+            ResetExternalGroundState();
+            NetworkedFallVelocity = Vector3.zero;
+            NetworkedFlyingVelocity = Vector3.zero;
+            // 終了時の慣性には予測誤差の修正量や重力相殺を含めない。
+            NetworkedMoveVelocity = (nextTarget - currentTarget) / deltaTime;
+            NetworkedAirMoveVelocity = NetworkedMoveVelocity;
+            NetworkVelocity = NetworkedMoveVelocity;
 
-            SetRotationDirection(_vaultEndPos - _vaultStartPos);
+            // 次の物理ステップで軌道上へ進む。Transform の直書きと落下を重ねない。
+            Vector3 velocity = (nextTarget - transform.position) / deltaTime;
+            _rb.linearVelocity = velocity - (_rb.useGravity ? Physics.gravity * deltaTime : Vector3.zero);
+            SetRotationDirection(VaultEndPosition - VaultStartPosition);
+            RotationByDirection(_rotationDirection, deltaTime);
+            if (HasStateAuthority) IsGroundNet = false;
+            return true;
+        }
 
-            if (_vaultTimer >= _timeToVault) EndVault((transform.position - prevPos) / deltaTime);
+        /// <summary> 同期された乗り越え軌道から、この進捗の位置を求める。 </summary>
+        private Vector3 EvaluateVaultPosition(float progress)
+        {
+            if (progress <= 0f) return VaultStartPosition;
+            if (progress >= 1f) return VaultEndPosition;
+
+            Vector3 position = Vector3.Lerp(VaultStartPosition, VaultEndPosition, progress);
+            bool descending = progress >= 0.5f;
+            float heightProgress = descending ? 2f * (1f - progress) : 2f * progress;
+            position.y = Mathf.Lerp(descending ? VaultEndPosition.y : VaultStartPosition.y,
+                VaultTopPosition.y, _vaultCurve.Evaluate(heightProgress));
+            return position;
         }
 
         void EndVault(Vector3 endVelocity)
@@ -685,6 +748,7 @@ namespace InGame.Player
         public void ResetExternalGroundState()
         {
             _isGround = false;
+            _groundGap = 0f;
             GroundedGraceRemaining = 0f;
             NetworkedGroundNormal = Vector3.up;
         }
@@ -705,6 +769,7 @@ namespace InGame.Player
         public async UniTask KnockBack(Vector3 force, float duration = 0)
         {
             if (!HasStateAuthority) return;
+            DoingVault = false;
 
             _rb.linearVelocity = force;
             NetworkedFlyingVelocity = force;
@@ -723,6 +788,7 @@ namespace InGame.Player
         // 指定位置へ移動する。回転が指定されている場合は向きも更新する。
         public void TeleportImmediate(Vector3 position, Quaternion? rotation = null)
         {
+            DoingVault = false;
             if (TryGetComponent<Fusion.Addons.Physics.NetworkRigidbody3D>(out var networkBody))
                 // NetworkRigidbodyに位置と任意の回転を渡し、物理・同期状態へ反映する。
                 networkBody.Teleport(position, rotation);
@@ -782,7 +848,12 @@ namespace InGame.Player
 
         private void CheckGroundManual()
         {
+            _isGround = false;
+            _groundGap = 0f;
+            if (_knockBackActive) return;
             if (!TryProbeGround(out Vector3 normal, out float gap)) return;
+            // 地面が探索範囲にあるだけでは着地しない。落下中は接触付近まで進ませる。
+            if (gap > GroundSnapTolerance) return;
 
             _isGround = true;
             GroundedGraceRemaining = _coyoteTime;
@@ -790,16 +861,8 @@ namespace InGame.Player
             _groundGap = gap;
         }
 
-        /// <summary> 立てる角度の面か </summary>
-        private bool IsWalkable(Vector3 normal) => Vector3.Angle(Vector3.up, normal) <= _groundSlopeThreshold;
-
         /// <summary>
-        /// 足裏から真下の地面を探索する
-        /// <para>
-        /// 足元中心のRaycastを優先し、現在立っている面の法線を取得する。
-        /// 下り始めなどRaycastが地面を見失った場合だけSphereCastで補完し、
-        /// 登り切りで前方の平地を先取りして移動方向が水平になることを防ぐ
-        /// </para>
+        /// 移動方向用の法線と、カプセルを食い込ませずに下降できる距離を取得する。
         /// </summary>
         /// <param name="normal">接地面の法線</param>
         /// <param name="gap">接地面までの下方向移動量</param>
@@ -811,47 +874,9 @@ namespace InGame.Player
 
         private bool TryProbeGround(float probeDistance, out Vector3 normal, out float gap)
         {
-            if (TryRaycastGround(probeDistance, out normal, out gap)) return true;
-            return TrySphereCastGround(probeDistance, out normal, out gap);
-        }
-
-        private bool TryRaycastGround(float probeDistance, out Vector3 normal, out float gap)
-        {
-            normal = Vector3.up;
-            gap = 0f;
-
-            Bounds bounds = _moveCapsuleCollider.bounds;
-            Vector3 rayOrigin = new(bounds.center.x, bounds.min.y + GroundProbeOffset, bounds.center.z);
-            if (!Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit rayHit, probeDistance, _groundLayer)) return false;
-            if (!IsWalkable(rayHit.normal)) return false;
-
-            float radius = Mathf.Min(bounds.extents.x, bounds.extents.z);
-            float normalY = Mathf.Max(rayHit.normal.y, Mathf.Epsilon);
-            float capsuleSlopeClearance = radius * (1f / normalY - 1f);
-            normal = rayHit.normal;
-            gap = Mathf.Max(0f, bounds.min.y - rayHit.point.y - capsuleSlopeClearance);
-            return true;
-        }
-
-        private bool TrySphereCastGround(float probeDistance, out Vector3 normal, out float gap)
-        {
-            normal = Vector3.up;
-            gap = 0f;
-
-            Bounds bounds = _moveCapsuleCollider.bounds;
-            float radius = Mathf.Min(bounds.extents.x, bounds.extents.z);
-            Vector3 sphereOrigin = new(bounds.center.x, bounds.min.y + radius + GroundProbeOffset, bounds.center.z);
-
-            if (!Physics.SphereCast(sphereOrigin, radius, Vector3.down, out RaycastHit sphereHit, probeDistance, _groundLayer)) return false;
-            if (sphereHit.distance <= 0f || !IsWalkable(sphereHit.normal)) return false;
-
-            float expectedContactHeight = bounds.min.y + radius * (1f - sphereHit.normal.y);
-            // 通常の斜面接触より高い位置へ当たった場合は、頂上の縁を先取りしたものとして除外する
-            if (sphereHit.point.y > expectedContactHeight + GroundSnapTolerance) return false;
-
-            normal = sphereHit.normal;
-            gap = Mathf.Max(0f, sphereHit.distance - GroundProbeOffset);
-            return true;
+            return PlayerGroundProbe.TryProbe(_moveCapsuleCollider, _groundLayer,
+                _groundSlopeThreshold, probeDistance, GroundProbeOffset, GroundSnapTolerance,
+                out normal, out gap);
         }
 
 

@@ -5970,7 +5970,7 @@ MonoBehaviour:
     m_RotationOrder: 4
   _evasionData: {fileID: 11400000, guid: a5096594ea23bc742976e6998f7765a8, type: 2}
   _locoBlendSpeed: 8
-  _fallInTime: 1
+  _fallInTime: 0.1
   _fallInCurve:
     serializedVersion: 2
     m_Curve:
