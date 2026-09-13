@@ -6291,6 +6291,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _coolTime: 3
   _playerManager: {fileID: -4668177863944640257}
+  _splashEffectPrefab: {fileID: 7432810104304409705, guid: 52a58111931fa12418534a8b11ec5d66, type: 3}
 --- !u!114 &2520683386849973483
 MonoBehaviour:
   m_ObjectHideFlags: 0
