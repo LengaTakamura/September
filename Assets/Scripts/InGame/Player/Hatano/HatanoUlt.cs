@@ -35,7 +35,6 @@ namespace InGame.Player.Ability
         private EffectSpawner _effectSpawner;
         private NetworkBool _isShoot;
         
-        private readonly string _idPredictedLocation = "HatanoUltPredictedLocation";
         private readonly string _rocketAnimName = "IsOpenlid";
 
         private EffectID _effectID;
