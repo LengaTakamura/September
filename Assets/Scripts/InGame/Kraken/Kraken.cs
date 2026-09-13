@@ -41,6 +41,12 @@ namespace September.InGame.Kraken
         [Header("インタラクト設定")]
         [SerializeField] private InteractableBase _interactable;
 
+        [Header("甲板の魔法陣")]
+        [SerializeField] private LayerMask _magicCircleGroundMask = 1 << 7;
+        [SerializeField, Min(0f)] private float _magicCircleSurfaceOffset = 0.05f;
+        [SerializeField] private KrakenMagicCircle _magicCircle;
+        [Networked] private NetworkBool MagicCircleFinished { get; set; }
+
         [Header("ダメージ設定")]
         [SerializeField] private int _dealScore = 10;
 
@@ -141,7 +147,33 @@ namespace September.InGame.Kraken
 
         public override void Spawned()
         {
+            ShowMagicCircle();
             Appear().Forget();
+        }
+
+        public override void Render()
+        {
+            if (MagicCircleFinished && _magicCircle != null) _magicCircle.End();
+        }
+
+        private void ShowMagicCircle()
+        {
+            if (MagicCircleFinished || _magicCircle == null || _interactable == null) return;
+
+            // UI 用の位置オフセットではなく、実際のインタラクト範囲の直下に表示する。
+            var anchor = _interactable.transform;
+            var position = anchor.position;
+            var normal = Vector3.up;
+            if (Physics.Raycast(position + Vector3.up * 2f, Vector3.down, out var hit,
+                    20f, _magicCircleGroundMask, QueryTriggerInteraction.Ignore))
+            {
+                position = hit.point;
+                normal = hit.normal;
+            }
+
+            _magicCircle.transform.SetPositionAndRotation(position + normal * _magicCircleSurfaceOffset,
+                Quaternion.FromToRotation(Vector3.up, normal));
+            _magicCircle.Play();
         }
 
         public override void FixedUpdateNetwork()
@@ -240,6 +272,7 @@ namespace September.InGame.Kraken
 
             OwnerPlayerRef = owner;
             _settings.RecentOwnerPlayerRef = owner;
+            MagicCircleFinished = true;
         }
 
         /// <summary>
@@ -312,6 +345,8 @@ namespace September.InGame.Kraken
 
         private async UniTaskVoid Disappear()
         {
+            if (HasStateAuthority) MagicCircleFinished = true;
+            if (_magicCircle != null) _magicCircle.End();
             _appearanceState = KrakenAppearanceState.Disappear;
             _interactable.ForceSetInteractable = false;
             await _playableDirector.PlayAsync(_outTimeline);
