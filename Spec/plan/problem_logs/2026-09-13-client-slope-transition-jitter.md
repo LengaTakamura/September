@@ -20,6 +20,13 @@
 
 ## 検証範囲
 
+### PlayerVaultMotion の名前解決エラー
+
+- 報告: PS24A_高村連芽さんより PlayerMovement 内の PlayerVaultMotion が存在しないコンパイルエラー。
+- 確認: 修正 commit 373ffbb5 には PlayerVaultMotion.cs と .meta が追跡済みで、PlayerMovement と同じ InGame.Player 名前空間・Scripts アセンブリ配下にある。報告環境のコンパイル対象から欠けた理由は未確認であり、ファイル未配信や Unity の取り込み状態を断定しない。
+- 対応: 小さい軌道評価処理を PlayerMovement.EvaluateVaultPosition に移し、PlayerVaultMotion への参照と新規 helper ファイルを削除する。同期プロパティ・Tick 計算・軌道の式は維持する。
+- 検証: PlayerVaultMotion のコード参照が残っていないこと、評価メソッドの呼出と宣言が同じクラス内にあること、移動前後の式と進捗境界が同じこと、および差分を静的確認。Unity のコンパイル実行は未実施。
+
 ### 乗り越えモーションのガタつきへの追補
 
 - 報告: PS24A_高村連芽さんより「乗り越えモーション時にがたつく 修正して」。同じ PR で追加修正する。

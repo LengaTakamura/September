@@ -686,10 +686,8 @@ namespace InGame.Player
                 return false;
             }
 
-            Vector3 currentTarget = PlayerVaultMotion.Evaluate(VaultStartPosition, VaultTopPosition,
-                VaultEndPosition, elapsed / VaultDuration, _vaultCurve);
-            Vector3 nextTarget = PlayerVaultMotion.Evaluate(VaultStartPosition, VaultTopPosition,
-                VaultEndPosition, (elapsed + deltaTime) / VaultDuration, _vaultCurve);
+            Vector3 currentTarget = EvaluateVaultPosition(elapsed / VaultDuration);
+            Vector3 nextTarget = EvaluateVaultPosition((elapsed + deltaTime) / VaultDuration);
 
             ResetExternalGroundState();
             NetworkedFallVelocity = Vector3.zero;
@@ -706,6 +704,20 @@ namespace InGame.Player
             RotationByDirection(_rotationDirection, deltaTime);
             if (HasStateAuthority) IsGroundNet = false;
             return true;
+        }
+
+        /// <summary> 同期された乗り越え軌道から、この進捗の位置を求める。 </summary>
+        private Vector3 EvaluateVaultPosition(float progress)
+        {
+            if (progress <= 0f) return VaultStartPosition;
+            if (progress >= 1f) return VaultEndPosition;
+
+            Vector3 position = Vector3.Lerp(VaultStartPosition, VaultEndPosition, progress);
+            bool descending = progress >= 0.5f;
+            float heightProgress = descending ? 2f * (1f - progress) : 2f * progress;
+            position.y = Mathf.Lerp(descending ? VaultEndPosition.y : VaultStartPosition.y,
+                VaultTopPosition.y, _vaultCurve.Evaluate(heightProgress));
+            return position;
         }
 
         void EndVault(Vector3 endVelocity)
