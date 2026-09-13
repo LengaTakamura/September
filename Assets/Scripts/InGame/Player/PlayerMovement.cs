@@ -88,7 +88,6 @@ namespace InGame.Player
         private bool CanDash => !_isDashCoolTime && _status.CurrentStamina > 0 && IsGround;
         private bool _isDash;
         // vault
-        private bool _doingVault;
         // Roll
         private PlayerEvasion _playerEvasion;
         /// <summary> 回避の同期状態。Tick 基準なので入力権限側の予測でも決定的に再計算できる </summary>
@@ -147,7 +146,12 @@ namespace InGame.Player
         [Networked] public Vector2 MoveDirection { get; private set; }
         private bool _isHookFollow;
         private Transform _hookTarget;
-        private float _vaultTimer;
+        [Networked] private int VaultStartTick { get; set; }
+        [Networked] private float VaultDuration { get; set; }
+        [Networked] private Vector3 VaultStartPosition { get; set; }
+        [Networked] private Vector3 VaultTopPosition { get; set; }
+        [Networked] private Vector3 VaultEndPosition { get; set; }
+        // Editor Gizmo 用。Tick 処理は上の Networked 状態だけを参照する。
         private Vector3 _vaultStartPos;
         private Vector3 _vaultTopPos;
         private Vector3 _vaultEndPos;
@@ -204,6 +208,7 @@ namespace InGame.Player
 
         public virtual void UpdateMovement(Vector2 moveInput, bool isDash, float cameraYaw, bool isJump, bool isEvasion, float deltaTime)
         {
+            if (DoingVault) return;
             PrepareGroundMovement(deltaTime);
 
             MoveDirection = GetMoveDirection(moveInput, cameraYaw);
@@ -257,6 +262,7 @@ namespace InGame.Player
         {
             if (_movementOverride != null && _movementOverride.TryOverrideMovement(this, deltaTime))
             {
+                DoingVault = false;
                 // 軌道移動中も描画用の接地状態を更新する。前Tickの接地を持ち越さない。
                 _isGround = false;
                 CheckGroundManual();
@@ -265,14 +271,26 @@ namespace InGame.Player
                 return;
             }
 
+            if (_teleportTarget.HasValue) DoingVault = false;
+            if (DoingVault)
+            {
+                if (UpdateVault(deltaTime))
+                {
+                    UpdateStamina(false, deltaTime);
+                    FinishGroundTick(deltaTime);
+                    return;
+                }
+
+                // 終了した Tick は軌道末尾で接地を取り直す。
+                groundPrepared = false;
+            }
+
             // 入力処理で確定した接地面を速度適用まで使う。
             // 入力がない Tick ではここで新たに探索する。
             if (!groundPrepared) PrepareGroundMovement(deltaTime);
 
             //回避
             if (IsEvading) UpdateEvasion();
-
-            if (DoingVault && HasStateAuthority) UpdateVault(deltaTime);
 
             if (_teleportTarget.HasValue)
             {
@@ -648,27 +666,46 @@ namespace InGame.Player
         void StartVault()
         {
             _groundGap = 0f;
-            _vaultTimer = 0;
+            VaultStartTick = Runner.Tick;
+            VaultDuration = Mathf.Max(_timeToVault, Runner.DeltaTime);
+            VaultStartPosition = _vaultStartPos;
+            VaultTopPosition = _vaultTopPos;
+            VaultEndPosition = _vaultEndPos;
             DoingVault = true;
+            _isDash = false;
             OnStartVault?.Invoke();
             Stop();
         }
 
-        void UpdateVault(float deltaTime)
+        private bool UpdateVault(float deltaTime)
         {
-            Vector3 prevPos = transform.position;
+            float elapsed = (Runner.Tick - VaultStartTick) * deltaTime;
+            if (elapsed >= VaultDuration)
+            {
+                EndVault(NetworkedMoveVelocity);
+                return false;
+            }
 
-            _vaultTimer += deltaTime;
-            float t = _vaultTimer / _timeToVault;
-            Vector3 resPos = Vector3.Lerp(_vaultStartPos, _vaultEndPos, t);
-            float curveValue = _vaultCurve.Evaluate(t >= 0.5f ? 1 - (t - 0.5f) * 2 : t * 2);
-            resPos.y = Mathf.Lerp(t >= 0.5f ? _vaultEndPos.y : _vaultStartPos.y, _vaultTopPos.y, curveValue);
+            Vector3 currentTarget = PlayerVaultMotion.Evaluate(VaultStartPosition, VaultTopPosition,
+                VaultEndPosition, elapsed / VaultDuration, _vaultCurve);
+            Vector3 nextTarget = PlayerVaultMotion.Evaluate(VaultStartPosition, VaultTopPosition,
+                VaultEndPosition, (elapsed + deltaTime) / VaultDuration, _vaultCurve);
 
-            transform.position = resPos;
+            ResetExternalGroundState();
+            NetworkedFallVelocity = Vector3.zero;
+            NetworkedFlyingVelocity = Vector3.zero;
+            // 終了時の慣性には予測誤差の修正量や重力相殺を含めない。
+            NetworkedMoveVelocity = (nextTarget - currentTarget) / deltaTime;
+            NetworkedAirMoveVelocity = NetworkedMoveVelocity;
+            NetworkVelocity = NetworkedMoveVelocity;
 
-            SetRotationDirection(_vaultEndPos - _vaultStartPos);
-
-            if (_vaultTimer >= _timeToVault) EndVault((transform.position - prevPos) / deltaTime);
+            // 次の物理ステップで軌道上へ進む。Transform の直書きと落下を重ねない。
+            Vector3 velocity = (nextTarget - transform.position) / deltaTime;
+            _rb.linearVelocity = velocity - (_rb.useGravity ? Physics.gravity * deltaTime : Vector3.zero);
+            SetRotationDirection(VaultEndPosition - VaultStartPosition);
+            RotationByDirection(_rotationDirection, deltaTime);
+            if (HasStateAuthority) IsGroundNet = false;
+            return true;
         }
 
         void EndVault(Vector3 endVelocity)
@@ -715,6 +752,7 @@ namespace InGame.Player
         public async UniTask KnockBack(Vector3 force, float duration = 0)
         {
             if (!HasStateAuthority) return;
+            DoingVault = false;
 
             _rb.linearVelocity = force;
             NetworkedFlyingVelocity = force;
@@ -733,6 +771,7 @@ namespace InGame.Player
         // 指定位置へ移動する。回転が指定されている場合は向きも更新する。
         public void TeleportImmediate(Vector3 position, Quaternion? rotation = null)
         {
+            DoingVault = false;
             if (TryGetComponent<Fusion.Addons.Physics.NetworkRigidbody3D>(out var networkBody))
                 // NetworkRigidbodyに位置と任意の回転を渡し、物理・同期状態へ反映する。
                 networkBody.Teleport(position, rotation);
