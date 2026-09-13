@@ -167,6 +167,8 @@ namespace InGame.Player
         public bool IsGround => (_isGround || GroundedGraceRemaining > 0) && !_knockBackActive;
         [Networked, HideInInspector]
         public NetworkBool IsGroundNet { get; private set; }
+        /// <summary> 描画用の実接地。移動入力用のコヨーテタイムを含めない。 </summary>
+        [Networked] public NetworkBool IsGroundForAnimation { get; private set; }
         public Vector3 GroundNormal => NetworkedGroundNormal;
         public bool InfiniteStamina { get; set; } = false;
         public CapsuleCollider MoveCapsuleCollider => _moveCapsuleCollider;
@@ -331,6 +333,9 @@ namespace InGame.Player
 
         private void FinishGroundTick(float deltaTime)
         {
+            // 入力権限側も予測し、描画開始をホストの通知待ちにしない。
+            if (HasStateAuthority || HasInputAuthority)
+                IsGroundForAnimation = _isGround && !_knockBackActive;
             // is ground の管理
             if (!_isGround && GroundedGraceRemaining > 0)
                 GroundedGraceRemaining = Mathf.Max(0f, GroundedGraceRemaining - deltaTime);

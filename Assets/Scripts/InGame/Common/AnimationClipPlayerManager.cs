@@ -34,7 +34,7 @@ namespace InGame.Common
         [Header("Loco Blend")]
         [SerializeField] private float _locoBlendSpeed;
         [Header("Fall Blend")]
-        [SerializeField, Range(0f, 1f)] private float _fallInTime = 0.20f;
+        [SerializeField, Range(0f, 1f)] private float _fallInTime = 0.10f;
         [SerializeField] private AnimationCurve _fallInCurve = null;   // null の場合は線形扱い
         [SerializeField, Range(0f, 1f)] private float _landOutTime = 0.12f;
         [SerializeField] private AnimationCurve _landOutCurve = null;
@@ -113,7 +113,7 @@ namespace InGame.Common
             };
 
             _playerMovement.UpdateAsObservable()
-                .Select(_ => _playerMovement.IsGroundNet || !EnableFallMotion) // EnableFallMotionが偽なら落下モーションを即時解除
+                .Select(_ => _playerMovement.IsGroundForAnimation || !EnableFallMotion)
                 .DistinctUntilChanged().Subscribe(x => SetFallAnim(x)).AddTo(this);
 
             // 回避開始 Tick の変化で発火する。Networked 状態由来なので、ホスト・予測中のクライアント・リモート表示の全てが同じ経路で再生される
@@ -197,6 +197,13 @@ namespace InGame.Common
             // ホスト計算結果を同期する。入力権限側でも予測値で上書きしない。
             if (!HasStateAuthority || !_animationClipPlayer) return;
 
+            if (ShouldSuppressAirborneLocomotion)
+            {
+                LocoTargetWeight = 0f;
+                LocoPlaybackRate = 0f;
+                return;
+            }
+
             var maxSpeed = _playerMovement.DashMoveSpeed;
             var walkSpeed = _playerMovement.WalkSpeed;
             var moveSpeed = _playerMovement.NetworkVelocity.magnitude;
@@ -221,14 +228,19 @@ namespace InGame.Common
             LocoPlaybackRate = baseSpeed > 0f ? speed / baseSpeed : 0f;
         }
 
+        private bool ShouldSuppressAirborneLocomotion =>
+            EnableFallMotion && !_playerMovement.IsGroundForAnimation;
+
         private void LateUpdate()
         {
             if (Object == null || !Object.IsValid || !_animationClipPlayer || !_animationClipPlayer.IsValid) return;
 
             // 描画フレームごとの補間は各端末で行い、目標値と再生倍率は同期値を使う。
-            _locoWeight = Mathf.MoveTowards(_locoWeight, LocoTargetWeight, _locoBlendSpeed * Time.deltaTime);
+            bool airborne = ShouldSuppressAirborneLocomotion;
+            _locoWeight = airborne ? 0f
+                : Mathf.MoveTowards(_locoWeight, LocoTargetWeight, _locoBlendSpeed * Time.deltaTime);
             _animationClipPlayer.SetLocoWeight(Mathf.Clamp(_locoWeight, 0f, 2f));
-            _animationClipPlayer.SetLocoPlaybackRate(LocoPlaybackRate);
+            _animationClipPlayer.SetLocoPlaybackRate(airborne ? 0f : LocoPlaybackRate);
             // 強制上書き中は、非ループクリップが終端に到達しても倒れた姿勢を保持する。
             if (!_hardOverride && !HasActiveTopLayerClip())
             {
@@ -283,7 +295,7 @@ namespace InGame.Common
                 }
             }
             _animationClipPlayer.PlayOnLayer(null);
-            if (!_playerMovement.IsGroundNet) SetFallAnim(false);
+            if (!_playerMovement.IsGroundForAnimation) SetFallAnim(false);
         }
 
         /// <param name="rollDuration"> 回避全体の所要時間 (秒)。クリップ長を割ってこの秒数に収まる再生速度にする </param>
