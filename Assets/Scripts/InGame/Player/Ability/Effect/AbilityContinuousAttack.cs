@@ -30,6 +30,7 @@ namespace InGame.Player.Ability
         [SerializeField] private QueryTriggerInteraction _triggerInteraction = QueryTriggerInteraction.Ignore;
         private readonly RaycastHit[] _hitBuffer = new RaycastHit[16];
         protected readonly HashSet<Collider> _alreadyHit = new HashSet<Collider>();
+
         [Header("ヒットエフェクト")]
         [SerializeField] protected EffectType _hitEffect = EffectType.HitNormal;
 
@@ -133,7 +134,7 @@ namespace InGame.Player.Ability
             SetSwordEquipped(elapsed);
 
             //攻撃する
-            if(elapsed >= _damageStartTick && elapsed <= _damageEndTick)
+            if (elapsed >= _damageStartTick && elapsed <= _damageEndTick)
             {
                 CastAndApplyHits();
             }
@@ -162,14 +163,14 @@ namespace InGame.Player.Ability
             // 剣を取り出す
             if (_shouldDrawSword && elapsed >= _drawSwordTick)
             {
-                _swordNetworkController. RPC_DrawSword();
+                _swordNetworkController.RPC_DrawSword();
                 _shouldDrawSword = false;
             }
 
             // 剣をしまう
             if (_shouldSheathSword && elapsed >= _sheathSwordTick)
             {
-                _swordNetworkController. RPC_SheathSword();
+                _swordNetworkController.RPC_SheathSword();
                 _shouldSheathSword = false;
             }
         }
@@ -305,6 +306,7 @@ namespace InGame.Player.Ability
             if (_animationClipPlayer)
                 _animationClipPlayer.PlayClip(endAnimationClip);
         }
+
         protected void CastAndApplyHits()
         {
             var t = Parameter.Owner.transform;
@@ -353,6 +355,7 @@ namespace InGame.Player.Ability
         private void OnHitEnemy(Collider hitInfo, Vector3 hitPosition)
         {
             if (hitInfo.GetComponentInParent<NetworkObject>() == Parameter.Owner) return;
+
             var damageable = hitInfo.GetComponentInParent<IDamageable>();
             if (damageable == null) return;
 
@@ -361,6 +364,7 @@ namespace InGame.Player.Ability
                 _attackDatas[_currentAttackIndex].DamageAmount,
                 Parameter.Owner.InputAuthority,
                 damageable.OwnerPlayerRef);
+
             damageable.TakeHit(ref hitData);
             _buildGenerator?.UpdateBuild(BuildRouteType.AttackPower);
 
@@ -370,17 +374,13 @@ namespace InGame.Player.Ability
 
         public override void SetPlayerComponent(GameObject player)
         {
-            _animationClipPlayer =
-                player.GetComponentInChildren<AnimationClipPlayer>();
+            _animationClipPlayer = player.GetComponentInChildren<AnimationClipPlayer>();
 
-            _buildGenerator =
-                player.GetComponentInChildren<BuildGenerator>();
+            _buildGenerator = player.GetComponentInChildren<BuildGenerator>();
 
-            _playerStatus =
-                player.GetComponentInChildren<PlayerStatus>();
+            _playerStatus = player.GetComponentInChildren<PlayerStatus>();
 
-            _playerMovement =
-                player.GetComponent<PlayerMovement>();
+            _playerMovement = player.GetComponent<PlayerMovement>();
         }
 
         private void FinishContinuousAttack()

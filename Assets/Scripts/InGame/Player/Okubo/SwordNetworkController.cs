@@ -8,7 +8,7 @@ namespace InGame.Player.Okubo
         [SerializeField] private Animator _animator;
         [SerializeField] private GameObject _swordObject;
         [SerializeField] private Transform _swordSocket;
-        [SerializeField] private HumanBodyBones _swordHandBone; 
+        [SerializeField] private HumanBodyBones _swordHandBone;
 
         [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
         public void RPC_DrawSword()

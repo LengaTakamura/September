@@ -132,7 +132,7 @@ namespace InGame.Player.Okubo
                 _currentHookLength = _wireLength;
                 ChangeState(HookAttackState.Stretched);
             }
-            if(!_isPlayAimClip && Runner.SimulationTime - _startAttackTime > _shotClip.length)
+            if (!_isPlayAimClip && Runner.SimulationTime - _startAttackTime > _shotClip.length)
             {
                 _animationClipPlayer.PlayClipLoop(_aimClip);
                 _isPlayAimClip = true;
