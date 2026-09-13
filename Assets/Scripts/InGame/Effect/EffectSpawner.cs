@@ -153,6 +153,33 @@ namespace September.InGame.Effect
         {
             RPC_StopEffectGraduallyById(effectId);
         }
+        
+        /// <summary>
+        /// エフェクトの位置を更新
+        /// </summary>
+        /// <param name="effectId">ユーザー名＋タイムスタンプ推奨</param>
+        /// <param name="position">位置</param>
+        /// <param name="rotation">回転</param>
+        public void UpdateEffect(EffectID effectId, Vector3 position, Quaternion rotation)
+        {
+            RPC_UpdateEffect(effectId, position, rotation);
+        }
+
+        /// <summary>
+        /// エフェクトの位置を更新RPC
+        /// </summary>
+        /// <param name="effectId">エフェクトID</param>
+        /// <param name="position">位置</param>
+        /// <param name="rotation">回転</param>
+        [Rpc(RpcSources.All, RpcTargets.All)]
+        private void RPC_UpdateEffect(EffectID effectId, Vector3 position, Quaternion rotation)
+        {
+            if (_activeEffects.TryGetValue(effectId, out var effect))
+            {
+                effect.transform.position = position;
+                effect.transform.rotation = rotation;
+            }
+        }
 
         /// <summary>
         /// 統一されたエフェクト再生RPC

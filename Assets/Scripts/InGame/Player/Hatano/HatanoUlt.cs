@@ -53,7 +53,6 @@ namespace InGame.Player.Ability
                 _animationClipPlayer = Parameter.Owner.GetComponent<AnimationClipPlayer>();
             // エフェクト生成
             _effectSpawner = StaticServiceLocator.Instance.Get<EffectSpawner>();
-            //_effectSpawner?.RequestPlayLoopEffect(_idPredictedLocation, _predictedLocation, Vector3.zero, Quaternion.identity);
             _effectID = _effectSpawner.RequestPlayLoopEffect(EffectType.Cursor, Vector3.zero, Quaternion.identity);
             
             _playerManager.RPC_SetControlState(PlayerManager.PlayerControlState.InputLocked);
@@ -139,7 +138,7 @@ namespace InGame.Player.Ability
             
             var pos = targetPos + normal * _offSet;
             var rot = Quaternion.FromToRotation(Vector3.up, normal);
-            //_effectSpawner?.UpdateEffect(_idPredictedLocation, pos, rot);
+            _effectSpawner?.UpdateEffect(_effectID, pos, rot);
         }
         
         /// <summary>
