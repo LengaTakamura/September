@@ -4184,6 +4184,7 @@ Transform:
   - {fileID: 6514696112518196840}
   - {fileID: 2298651385927578978}
   - {fileID: 8968702711891242499}
+  - {fileID: 3451238527470211891}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &6586812862865409982
@@ -4229,6 +4230,11 @@ MonoBehaviour:
   _predictionEndTime: 4
   _aimMarker: {fileID: 7433912045861223470}
   _interactable: {fileID: 9018000286361871000}
+  _magicCircleGroundMask:
+    serializedVersion: 2
+    m_Bits: 128
+  _magicCircleSurfaceOffset: 0.05
+  _magicCircle: {fileID: 1153563147967587697}
   _dealScore: 10
   _stayDuration: 20
   _playableDirector: {fileID: 6602018564722246398}
@@ -6387,7 +6393,7 @@ GameObject:
   - component: {fileID: 2298651385927578978}
   - component: {fileID: 1403442878867718767}
   - component: {fileID: 9018000286361871000}
-  - component: {fileID: 7457896371660097158}
+  - component: {fileID: 7071841579239128105}
   m_Layer: 2
   m_Name: InteractArea
   m_TagString: Untagged
@@ -6404,7 +6410,7 @@ Transform:
   m_GameObject: {fileID: 9041751355630559573}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 13.040001, z: 36.1}
+  m_LocalPosition: {x: 0, y: 12.29, z: 38.24}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -6446,8 +6452,8 @@ MonoBehaviour:
   _characterEffects:
   - rid: 5799214060048744533
   _type: 16
-  _interactPositionOffset: {x: 0, y: 0, z: -21.63}
-  _interactAreaCollider: {fileID: 7457896371660097158}
+  _interactPositionOffset: {x: 0, y: 0, z: 0}
+  _interactAreaCollider: {fileID: 7071841579239128105}
   _interactEffectOffset: {x: 0, y: 0, z: 0}
   _cooldownEffectTransform: {fileID: 0}
   _cooldownEffectOffset: {x: 0, y: 0, z: 0}
@@ -6484,8 +6490,8 @@ MonoBehaviour:
       data:
         _characterType: 5
         _targetMountable: {fileID: 4310841098914768764}
---- !u!65 &7457896371660097158
-BoxCollider:
+--- !u!135 &7071841579239128105
+SphereCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -6503,7 +6509,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 2.96, y: 3.559165, z: 1.1130514}
+  m_Radius: 0.5
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &9085446354287133766
 GameObject:
@@ -7220,6 +7226,79 @@ Transform:
 Transform:
   m_CorrespondingSourceObject: {fileID: 7254749791681278002, guid: e9c556dd3ad7ff945bef5954cd716d79, type: 3}
   m_PrefabInstance: {fileID: 2003882328517029771}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1001 &3884488400017767577
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 331088913545005189}
+    m_Modifications:
+    - target: {fileID: 1877221188882542506, guid: 29f4de6f07951ad419678b5276b51276, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1877221188882542506, guid: 29f4de6f07951ad419678b5276b51276, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 13.040001
+      objectReference: {fileID: 0}
+    - target: {fileID: 1877221188882542506, guid: 29f4de6f07951ad419678b5276b51276, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 36.1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1877221188882542506, guid: 29f4de6f07951ad419678b5276b51276, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1877221188882542506, guid: 29f4de6f07951ad419678b5276b51276, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1877221188882542506, guid: 29f4de6f07951ad419678b5276b51276, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1877221188882542506, guid: 29f4de6f07951ad419678b5276b51276, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1877221188882542506, guid: 29f4de6f07951ad419678b5276b51276, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1877221188882542506, guid: 29f4de6f07951ad419678b5276b51276, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1877221188882542506, guid: 29f4de6f07951ad419678b5276b51276, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4670802415435053183, guid: 29f4de6f07951ad419678b5276b51276, type: 3}
+      propertyPath: m_Name
+      value: KrakenMagicCircle
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 29f4de6f07951ad419678b5276b51276, type: 3}
+--- !u!114 &1153563147967587697 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2732064346518182376, guid: 29f4de6f07951ad419678b5276b51276, type: 3}
+  m_PrefabInstance: {fileID: 3884488400017767577}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3e046ac769b742b79003582b27c7b43d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!4 &3451238527470211891 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 1877221188882542506, guid: 29f4de6f07951ad419678b5276b51276, type: 3}
+  m_PrefabInstance: {fileID: 3884488400017767577}
   m_PrefabAsset: {fileID: 0}
 --- !u!1001 &4666686509008557507
 PrefabInstance:
