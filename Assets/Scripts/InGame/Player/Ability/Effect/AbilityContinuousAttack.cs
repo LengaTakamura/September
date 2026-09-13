@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Fusion;
 using InGame.Common;
 using InGame.Health;
+using InGame.Player.Okubo;
 using September.Common;
 using September.InGame.Common.Stats;
 using September.InGame.Effect;
@@ -33,10 +34,7 @@ namespace InGame.Player.Ability
         [SerializeField] protected EffectType _hitEffect = EffectType.HitNormal;
 
         [Header("剣")]
-        [SerializeField] private Animator _animator;
-        [SerializeField] private GameObject _swordObject;
-        [SerializeField] private Transform _swordSocket;
-        [SerializeField] private HumanBodyBones _swordHandBone;
+        [SerializeField] private SwordNetworkController _swordNetworkController;
 
         [Header("ビルドシステム関連の参照")]
         [SerializeField] protected BuildGenerator _buildGenerator;
@@ -164,19 +162,14 @@ namespace InGame.Player.Ability
             // 剣を取り出す
             if (_shouldDrawSword && elapsed >= _drawSwordTick)
             {
-                var parent = _animator.GetBoneTransform(_swordHandBone);
-                _swordObject.transform.parent = parent;
-                _swordObject.transform.localRotation = Quaternion.identity;
-                _swordObject.transform.localPosition = Vector3.zero;
+                _swordNetworkController. RPC_DrawSword();
                 _shouldDrawSword = false;
             }
 
             // 剣をしまう
             if (_shouldSheathSword && elapsed >= _sheathSwordTick)
             {
-                _swordObject.transform.parent = _swordSocket;
-                _swordObject.transform.localRotation = Quaternion.identity;
-                _swordObject.transform.localPosition = Vector3.zero;
+                _swordNetworkController. RPC_SheathSword();
                 _shouldSheathSword = false;
             }
         }
@@ -388,9 +381,6 @@ namespace InGame.Player.Ability
 
             _playerMovement =
                 player.GetComponent<PlayerMovement>();
-
-            _animator =
-                player.GetComponentInChildren<Animator>();
         }
 
         private void FinishContinuousAttack()

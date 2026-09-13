@@ -138,7 +138,7 @@ namespace InGame.Player.Okubo
                 _isPlayAimClip = true;
             }
 
-            UpdateHookLength(_currentHookLength, this.transform.forward);
+            RPC_UpdateHookLength(_currentHookLength, this.transform.forward);
             GetHitPlayer(_currentHookLength, this.transform.forward);
         }
 
@@ -162,7 +162,7 @@ namespace InGame.Player.Okubo
                 ChangeState(HookAttackState.CoolDown);
             }
 
-            UpdateHookLength(_currentHookLength, transform.forward);
+            RPC_UpdateHookLength(_currentHookLength, transform.forward);
 
             var hookSqr = (this.transform.position - _hookMesh.transform.position).sqrMagnitude;
             foreach (var kv in _targetData)
@@ -199,7 +199,8 @@ namespace InGame.Player.Okubo
             }
         }
 
-        private void UpdateHookLength(float length, Vector3 direction)
+        [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+        private void RPC_UpdateHookLength(float length, Vector3 direction)
         {
             var startPosition = _wireOrigin.transform.position;
             var endPosition = startPosition + direction * length;

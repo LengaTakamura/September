@@ -2179,7 +2179,7 @@ MonoBehaviour:
     TargetLayer: 1
     IsAdditive: 0
     DisableFootIK: 0
-  - AnimClip: {fileID: 1827226128182048838, guid: da8e21f273e31484cba2d523306268b8, type: 3}
+  - AnimClip: {fileID: 1827226128182048838, guid: 93053399b18e44c42b9e091a5002dcaf, type: 3}
     PlaySpeed: 1
     BlendIn:
       BlendTime: 0
@@ -2237,7 +2237,7 @@ MonoBehaviour:
     IsAdditive: 0
     DisableFootIK: 0
   - AnimClip: {fileID: -3153766841233697512, guid: d1586d0d3850841498b2874d8ce2e5fa, type: 3}
-    PlaySpeed: 0.5
+    PlaySpeed: 1
     BlendIn:
       BlendTime: 0
       BlendCurve:
@@ -2296,25 +2296,25 @@ MonoBehaviour:
   - AnimClip: {fileID: 1827226128182048838, guid: e7f6d82a4677ece47a0aaf56773ba37d, type: 3}
     PlaySpeed: 1
     BlendIn:
-      BlendTime: 0
+      BlendTime: 0.3
       BlendCurve:
         serializedVersion: 2
         m_Curve:
         - serializedVersion: 3
           time: 0
           value: 0
-          inSlope: 1
-          outSlope: 1
-          tangentMode: 34
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
           weightedMode: 0
           inWeight: 0
           outWeight: 0
         - serializedVersion: 3
           time: 1
           value: 1
-          inSlope: 1
-          outSlope: 1
-          tangentMode: 34
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
           weightedMode: 0
           inWeight: 0
           outWeight: 0
@@ -2322,25 +2322,25 @@ MonoBehaviour:
         m_PostInfinity: 2
         m_RotationOrder: 0
     BlendOut:
-      BlendTime: 0
+      BlendTime: 0.3
       BlendCurve:
         serializedVersion: 2
         m_Curve:
         - serializedVersion: 3
           time: 0
           value: 0
-          inSlope: 1
-          outSlope: 1
-          tangentMode: 34
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
           weightedMode: 0
           inWeight: 0
           outWeight: 0
         - serializedVersion: 3
           time: 1
           value: 1
-          inSlope: 1
-          outSlope: 1
-          tangentMode: 34
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
           weightedMode: 0
           inWeight: 0
           outWeight: 0
@@ -2353,25 +2353,25 @@ MonoBehaviour:
   - AnimClip: {fileID: 1827226128182048838, guid: 2c98b8f4cdfd2b64082f94338127c8dc, type: 3}
     PlaySpeed: 1
     BlendIn:
-      BlendTime: 0
+      BlendTime: 0.3
       BlendCurve:
         serializedVersion: 2
         m_Curve:
         - serializedVersion: 3
           time: 0
           value: 0
-          inSlope: 1
-          outSlope: 1
-          tangentMode: 34
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
           weightedMode: 0
           inWeight: 0
           outWeight: 0
         - serializedVersion: 3
           time: 1
           value: 1
-          inSlope: 1
-          outSlope: 1
-          tangentMode: 34
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
           weightedMode: 0
           inWeight: 0
           outWeight: 0
@@ -2379,25 +2379,25 @@ MonoBehaviour:
         m_PostInfinity: 2
         m_RotationOrder: 0
     BlendOut:
-      BlendTime: 0
+      BlendTime: 0.3
       BlendCurve:
         serializedVersion: 2
         m_Curve:
         - serializedVersion: 3
           time: 0
           value: 0
-          inSlope: 1
-          outSlope: 1
-          tangentMode: 34
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
           weightedMode: 0
           inWeight: 0
           outWeight: 0
         - serializedVersion: 3
           time: 1
           value: 1
-          inSlope: 1
-          outSlope: 1
-          tangentMode: 34
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
           weightedMode: 0
           inWeight: 0
           outWeight: 0
@@ -2410,25 +2410,25 @@ MonoBehaviour:
   - AnimClip: {fileID: 1827226128182048838, guid: 597e986ff581d3249aa460c28d05e5b3, type: 3}
     PlaySpeed: 1
     BlendIn:
-      BlendTime: 0
+      BlendTime: 0.3
       BlendCurve:
         serializedVersion: 2
         m_Curve:
         - serializedVersion: 3
           time: 0
           value: 0
-          inSlope: 1
-          outSlope: 1
-          tangentMode: 34
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
           weightedMode: 0
           inWeight: 0
           outWeight: 0
         - serializedVersion: 3
           time: 1
           value: 1
-          inSlope: 1
-          outSlope: 1
-          tangentMode: 34
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
           weightedMode: 0
           inWeight: 0
           outWeight: 0
@@ -2436,25 +2436,25 @@ MonoBehaviour:
         m_PostInfinity: 2
         m_RotationOrder: 0
     BlendOut:
-      BlendTime: 0
+      BlendTime: 0.3
       BlendCurve:
         serializedVersion: 2
         m_Curve:
         - serializedVersion: 3
           time: 0
           value: 0
-          inSlope: 1
-          outSlope: 1
-          tangentMode: 34
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
           weightedMode: 0
           inWeight: 0
           outWeight: 0
         - serializedVersion: 3
           time: 1
           value: 1
-          inSlope: 1
-          outSlope: 1
-          tangentMode: 34
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
           weightedMode: 0
           inWeight: 0
           outWeight: 0
@@ -2467,25 +2467,25 @@ MonoBehaviour:
   - AnimClip: {fileID: 1827226128182048838, guid: 7f2e8c9d639116148a0f5ce513c67542, type: 3}
     PlaySpeed: 1
     BlendIn:
-      BlendTime: 0
+      BlendTime: 0.3
       BlendCurve:
         serializedVersion: 2
         m_Curve:
         - serializedVersion: 3
           time: 0
           value: 0
-          inSlope: 1
-          outSlope: 1
-          tangentMode: 34
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
           weightedMode: 0
           inWeight: 0
           outWeight: 0
         - serializedVersion: 3
           time: 1
           value: 1
-          inSlope: 1
-          outSlope: 1
-          tangentMode: 34
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
           weightedMode: 0
           inWeight: 0
           outWeight: 0
@@ -2493,25 +2493,25 @@ MonoBehaviour:
         m_PostInfinity: 2
         m_RotationOrder: 0
     BlendOut:
-      BlendTime: 0
+      BlendTime: 0.3
       BlendCurve:
         serializedVersion: 2
         m_Curve:
         - serializedVersion: 3
           time: 0
           value: 0
-          inSlope: 1
-          outSlope: 1
-          tangentMode: 34
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
           weightedMode: 0
           inWeight: 0
           outWeight: 0
         - serializedVersion: 3
           time: 1
           value: 1
-          inSlope: 1
-          outSlope: 1
-          tangentMode: 34
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
           weightedMode: 0
           inWeight: 0
           outWeight: 0
@@ -2524,25 +2524,25 @@ MonoBehaviour:
   - AnimClip: {fileID: 1827226128182048838, guid: a85055d94dbfcd944be2b14c8d45ad1f, type: 3}
     PlaySpeed: 1
     BlendIn:
-      BlendTime: 0
+      BlendTime: 0.3
       BlendCurve:
         serializedVersion: 2
         m_Curve:
         - serializedVersion: 3
           time: 0
           value: 0
-          inSlope: 1
-          outSlope: 1
-          tangentMode: 34
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
           weightedMode: 0
           inWeight: 0
           outWeight: 0
         - serializedVersion: 3
           time: 1
           value: 1
-          inSlope: 1
-          outSlope: 1
-          tangentMode: 34
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
           weightedMode: 0
           inWeight: 0
           outWeight: 0
@@ -2550,25 +2550,25 @@ MonoBehaviour:
         m_PostInfinity: 2
         m_RotationOrder: 0
     BlendOut:
-      BlendTime: 0
+      BlendTime: 0.3
       BlendCurve:
         serializedVersion: 2
         m_Curve:
         - serializedVersion: 3
           time: 0
           value: 0
-          inSlope: 1
-          outSlope: 1
-          tangentMode: 34
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
           weightedMode: 0
           inWeight: 0
           outWeight: 0
         - serializedVersion: 3
           time: 1
           value: 1
-          inSlope: 1
-          outSlope: 1
-          tangentMode: 34
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
           weightedMode: 0
           inWeight: 0
           outWeight: 0
@@ -2581,25 +2581,25 @@ MonoBehaviour:
   - AnimClip: {fileID: 1827226128182048838, guid: 265086330f9ac994fa2005d65ce4b8fa, type: 3}
     PlaySpeed: 1
     BlendIn:
-      BlendTime: 0
+      BlendTime: 0.3
       BlendCurve:
         serializedVersion: 2
         m_Curve:
         - serializedVersion: 3
           time: 0
           value: 0
-          inSlope: 1
-          outSlope: 1
-          tangentMode: 34
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
           weightedMode: 0
           inWeight: 0
           outWeight: 0
         - serializedVersion: 3
           time: 1
           value: 1
-          inSlope: 1
-          outSlope: 1
-          tangentMode: 34
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
           weightedMode: 0
           inWeight: 0
           outWeight: 0
@@ -2695,25 +2695,25 @@ MonoBehaviour:
   - AnimClip: {fileID: -7023660084421661956, guid: 707bf377ff7fc814bbd2e6126d1e6694, type: 3}
     PlaySpeed: 1
     BlendIn:
-      BlendTime: 0
+      BlendTime: 0.3
       BlendCurve:
         serializedVersion: 2
         m_Curve:
         - serializedVersion: 3
           time: 0
           value: 0
-          inSlope: 1
-          outSlope: 1
-          tangentMode: 34
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
           weightedMode: 0
           inWeight: 0
           outWeight: 0
         - serializedVersion: 3
           time: 1
           value: 1
-          inSlope: 1
-          outSlope: 1
-          tangentMode: 34
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
           weightedMode: 0
           inWeight: 0
           outWeight: 0
@@ -2721,25 +2721,25 @@ MonoBehaviour:
         m_PostInfinity: 2
         m_RotationOrder: 0
     BlendOut:
-      BlendTime: 0
+      BlendTime: 0.3
       BlendCurve:
         serializedVersion: 2
         m_Curve:
         - serializedVersion: 3
           time: 0
           value: 0
-          inSlope: 1
-          outSlope: 1
-          tangentMode: 34
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
           weightedMode: 0
           inWeight: 0
           outWeight: 0
         - serializedVersion: 3
           time: 1
           value: 1
-          inSlope: 1
-          outSlope: 1
-          tangentMode: 34
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
           weightedMode: 0
           inWeight: 0
           outWeight: 0
@@ -2752,25 +2752,25 @@ MonoBehaviour:
   - AnimClip: {fileID: -8127976319273920460, guid: b6c7691e9f1d3af42b32fb777d82704c, type: 3}
     PlaySpeed: 1
     BlendIn:
-      BlendTime: 0
+      BlendTime: 0.3
       BlendCurve:
         serializedVersion: 2
         m_Curve:
         - serializedVersion: 3
           time: 0
           value: 0
-          inSlope: 1
-          outSlope: 1
-          tangentMode: 34
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
           weightedMode: 0
           inWeight: 0
           outWeight: 0
         - serializedVersion: 3
           time: 1
           value: 1
-          inSlope: 1
-          outSlope: 1
-          tangentMode: 34
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
           weightedMode: 0
           inWeight: 0
           outWeight: 0
@@ -2778,25 +2778,25 @@ MonoBehaviour:
         m_PostInfinity: 2
         m_RotationOrder: 0
     BlendOut:
-      BlendTime: 0
+      BlendTime: 0.3
       BlendCurve:
         serializedVersion: 2
         m_Curve:
         - serializedVersion: 3
           time: 0
           value: 0
-          inSlope: 1
-          outSlope: 1
-          tangentMode: 34
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
           weightedMode: 0
           inWeight: 0
           outWeight: 0
         - serializedVersion: 3
           time: 1
           value: 1
-          inSlope: 1
-          outSlope: 1
-          tangentMode: 34
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
           weightedMode: 0
           inWeight: 0
           outWeight: 0

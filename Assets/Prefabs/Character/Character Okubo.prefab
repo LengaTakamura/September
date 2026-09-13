@@ -2028,7 +2028,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &1110204418141212097
 Transform:
   m_ObjectHideFlags: 0
@@ -2075,7 +2075,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 3fea4dd911c13384c8428e864337572f, type: 2}
+  - {fileID: 2100000, guid: 35e4ec7f9e7a28c419ab0496c5f64e26, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -2116,7 +2116,7 @@ MonoBehaviour:
   m_Sides: 8
   m_SegmentsPerUnit: 4
   m_Capped: 0
-  m_Radius: 0.05
+  m_Radius: 0.06
   m_Range: {x: 0, y: 1}
   m_FlipNormals: 0
   m_Shape:
@@ -2127,7 +2127,7 @@ MonoBehaviour:
     - rid: 8775182069451718767
       type: {class: Circle, ns: UnityEngine.Splines.ExtrusionShapes, asm: Unity.Splines}
       data:
-        m_Sides: 8
+        m_Sides: 6
 --- !u!1 &2488181347740176824
 GameObject:
   m_ObjectHideFlags: 0
@@ -6676,7 +6676,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &136196335226299786
 Transform:
   m_ObjectHideFlags: 0
@@ -7719,6 +7719,7 @@ GameObject:
   - component: {fileID: 823846777013421275}
   - component: {fileID: -8262729499669972947}
   - component: {fileID: -7425297506862547660}
+  - component: {fileID: 6986284182179614427}
   m_Layer: 6
   m_Name: Character Okubo
   m_TagString: Player
@@ -7823,6 +7824,7 @@ MonoBehaviour:
   - {fileID: 823846777013421275}
   - {fileID: -8262729499669972947}
   - {fileID: -7425297506862547660}
+  - {fileID: 6986284182179614427}
   - {fileID: 8132724737360883214}
   - {fileID: 4666162977347332760}
   - {fileID: 300863833827060737}
@@ -7865,7 +7867,7 @@ MonoBehaviour:
   Animator: {fileID: 8879401234198106394}
   ApplyTiming: 2
   SyncSettings: 79
-  StateHashes: 000000000cdf50fb5e852fd2325a708301e955b463c93159cc4916ca
+  StateHashes: 000000000cdf50fb5e852fd2325a708301e955b4
   TriggerHashes: 00000000
   TotalWords: 2
 --- !u!114 &1854927727251838311
@@ -8163,7 +8165,7 @@ MonoBehaviour:
           _drawSwordFrame: -1
           _sheathSwordFrame: 49
         - _startAnimationClip: {fileID: 1827226128182048838, guid: a85055d94dbfcd944be2b14c8d45ad1f, type: 3}
-          _endAnimationClip: {fileID: 1827226128182048838, guid: 2c98b8f4cdfd2b64082f94338127c8dc, type: 3}
+          _endAnimationClip: {fileID: 1827226128182048838, guid: 265086330f9ac994fa2005d65ce4b8fa, type: 3}
           _damageStartFrame: 9
           _damageEndFrame: 11
           _damageAmount: 10
@@ -8180,10 +8182,7 @@ MonoBehaviour:
           m_Bits: 4294967295
         _triggerInteraction: 1
         _hitEffect: 18
-        _animator: {fileID: 8879401234198106394}
-        _swordObject: {fileID: 928941539651277310}
-        _swordSocket: {fileID: 3657174714387418950}
-        _swordHandBone: 18
+        _swordNetworkController: {fileID: 6986284182179614427}
         _buildGenerator: {fileID: 0}
         _playerStatus: {fileID: 0}
 --- !u!114 &7929792229899843319
@@ -8216,7 +8215,7 @@ MonoBehaviour:
     Weight: 0
     Additive: 0
   _graphSpeed: 1
-  _wait: {fileID: 1827226128182048838, guid: da8e21f273e31484cba2d523306268b8, type: 3}
+  _wait: {fileID: 1827226128182048838, guid: 93053399b18e44c42b9e091a5002dcaf, type: 3}
   _walk: {fileID: 7400000, guid: b0eef498192b4af4da58c49f42d6f6fe, type: 2}
   _run: {fileID: -3153766841233697512, guid: d1586d0d3850841498b2874d8ce2e5fa, type: 3}
   _locoWeight: 0
@@ -8595,6 +8594,22 @@ MonoBehaviour:
   _randomDirectionAmount: 0.4
   _throwPower: 3
   _throwUpAmount: 1
+--- !u!114 &6986284182179614427
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9102779103699566197}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fce22005d99b9eb4c813610996662720, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _animator: {fileID: 8879401234198106394}
+  _swordObject: {fileID: 928941539651277310}
+  _swordSocket: {fileID: 3657174714387418950}
+  _swordHandBone: 18
 --- !u!1 &9174878733252042716
 GameObject:
   m_ObjectHideFlags: 0
