@@ -13,8 +13,10 @@ MonoBehaviour:
   m_Name: HammerAttackSettings
   m_EditorClassIdentifier: 
   _disableDuration:
-    keys: 0102030405060708090a0b0c0d0e0f1011121314
+    keys: 0102030405060708090a0b0c0d0e0f10111213141516
     values:
+    - 5
+    - 5
     - 5
     - 5
     - 5

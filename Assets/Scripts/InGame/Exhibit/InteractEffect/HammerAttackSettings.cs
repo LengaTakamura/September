@@ -10,7 +10,13 @@ namespace InGame.Exhibit.InteractEffect
 
         public bool TryGetDisableDuration(ExhibitType exhibitType, out float duration)
         {
-            return _disableDuration.Dictionary.TryGetValue(exhibitType, out duration);
+            if (_disableDuration.Dictionary.TryGetValue(exhibitType, out duration))
+            {
+                return true;
+            }
+
+            Debug.LogWarning($"[HammerAttackSettings] ExhibitType:{exhibitType} の破壊秒数が設定されていません。", this);
+            return false;
         }
     }
 }
