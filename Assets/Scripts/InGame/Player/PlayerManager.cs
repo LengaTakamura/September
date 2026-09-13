@@ -2,6 +2,7 @@ using Fusion;
 using Ingame.Tanihira;
 using InGame.Health;
 using September.Common;
+using September.InGame.Common;
 using September.InGame.Common.Stats;
 using UnityEngine;
 using PlayerInput = September.Common.PlayerInput;
@@ -20,6 +21,11 @@ namespace InGame.Player
         [SerializeField] private float _stunTime; // PlayerParameter に入れるべきか
         [SerializeField] private Vector3 _respawnPosition;
         [SerializeField] private GameObject _attackWeapon;
+        [Header("ロックオン設定")]
+        [SerializeField, Min(0f), Tooltip("ロックオン開始時に対象を検索する最大距離")]
+        private float _lockOnSearchRadius = 20f;
+        [SerializeField, Min(0f), Tooltip("ロックオンを維持できる対象との最大高低差")]
+        private float _lockOnVerticalRange = 1.5f;
         [Header("ビルドシステム関連の参照")]
         [SerializeField] BuildGenerator _buildGenerator;
         [SerializeField] PlayerStatus _playerStatus;
@@ -27,13 +33,69 @@ namespace InGame.Player
         PlayerMovement _playerMovement;
         CameraController _cameraController;
         PlayerHealth _playerHealth;
-        TickTimer _stunTickTimer;
         PlayerEffectController _playerEffectController;
         Rigidbody _rigidbody;
         private bool _shouldWarp = false;
         private Vector3 _targetPosition;
         private Quaternion _targetRotation;
         private bool _isVaultingLastFrame = false;
+        private Transform _rideTarget;
+        private Vector3 _rideOffset;
+        private Vector3 _savedMeshLocalPosition;
+        private Quaternion _savedMeshLocalRotation;
+        private Quaternion _rideMeshRotationOffset;
+        private Vector3 _rideMeshWorldOffset;
+        private bool _rideTrackingActive;
+
+        // 乗車中の本体・見た目・カメラの追従を開始する。
+        // 台車と乗車オフセットを保存し、入力権限がある場合はカメラの追従も開始する。
+        // 降車時に復元できるよう、見た目の元のローカル位置を保存する。
+        public void BeginRideTracking(Transform target, Vector3 offset)
+        {
+            if (target == null) return;
+            if (_rideTrackingActive) EndRideTracking();
+            _rideTrackingActive = true;
+            _rideTarget = target;
+            _rideOffset = offset;
+            if (_meshObj != null && _meshObj.transform != transform)
+            {
+                _savedMeshLocalPosition = _meshObj.transform.localPosition;
+                _savedMeshLocalRotation = _meshObj.transform.localRotation;
+                // プレイヤー本体に対するモデルの相対回転を保存する。
+                _rideMeshRotationOffset = Quaternion.Inverse(transform.rotation) * _meshObj.transform.rotation;
+                _rideMeshWorldOffset = _meshObj.transform.position - transform.position;
+            }
+
+            // カメラの追従を開始
+            if (HasInputAuthority && _cameraController != null)
+                _cameraController.BeginRideView(target, offset);
+
+            UpdateRideTracking();
+        }
+
+        public void EndRideTracking()
+        {
+            // 通常降車・途中終了の両方から呼ぶ。二重に呼ばれても復元は一度だけ行う。
+            if (!_rideTrackingActive) return;
+            UpdateRideTracking();
+            _rideTrackingActive = false;
+            _rideTarget = null;
+            if (_meshObj != null && _meshObj.transform != transform)
+            {
+                _meshObj.transform.localPosition = _savedMeshLocalPosition;
+                // 乗車中の回転追従を終了し、モデルのローカル回転を乗車前の値へ戻す。
+                _meshObj.transform.localRotation = _savedMeshLocalRotation;
+            }
+            if (HasInputAuthority && _cameraController != null) _cameraController.EndRideView();
+        }
+
+        // 状態権限側で本体の物理・同期状態を乗り物に追従させる。
+        private void UpdateRideTracking()
+        {
+            if (!HasStateAuthority || !_rideTrackingActive || _rideTarget == null) return;
+            _playerMovement.TeleportImmediate(_rideTarget.position + _rideOffset, _rideTarget.rotation);
+        }
+
         private RigidbodyConstraints _defaultConstraints;
 
         [Networked] public PlayerControlState CurrentPlayerControlState { get; private set; } = PlayerControlState.Normal;
@@ -66,6 +128,9 @@ namespace InGame.Player
         [Networked] private NetworkButtons PreviousButtons { get; set; }
         [Networked, HideInInspector] public NetworkBool IsStun { get; private set; }
         [Networked, HideInInspector] public NetworkBool IsMovable { get; private set; } = true;
+        [Networked, HideInInspector] public NetworkBool IsLockOnActive { get; private set; }
+        [Networked] private NetworkId LockOnTargetId { get; set; }
+        [Networked] private TickTimer StunTickTimer { get; set; }
 
         public override void Spawned()
         {
@@ -104,35 +169,18 @@ namespace InGame.Player
 
         protected virtual void LateUpdate()
         {
-            // if (_animationClipPlayer)
-            // {
-            //     var maxSpeed = _playerMovement.DashMoveSpeed;
-            //     var walkSpeed = _playerMovement.WalkSpeed;
-            //     var moveSpeed = _playerMovement._moveVelocity.magnitude;
-            //     var weight = 0f;
-            //     if (moveSpeed <= walkSpeed)
-            //     {
-            //         // 0..Walk -> 0..1
-            //         weight = Mathf.InverseLerp(0f, walkSpeed, moveSpeed);
-            //     }
-            //     else
-            //     {
-            //         // Walk..Max -> 1..2
-            //         weight = Mathf.InverseLerp(walkSpeed, maxSpeed, moveSpeed) + 1f;
-            //     }
-            //     
-            //     _animationClipPlayer.SetLocoWeight(weight);
-            //     
-            //     switch ()
-            //     {
-            //         case false when _playerMovement.DoingVault:
-            //             _animationClipPlayer.SetTopPriorityClip(true);
-            //             break;
-            //         case true when !_playerMovement.DoingVault:
-            //             _animationClipPlayer.SetTopPriorityClip(false);
-            //             break;
-            //     }
-            // }
+            // 台車位置に乗車オフセットとモデルのオフセットを加え、見た目の位置を更新する。
+            // 台車がなくなった場合は追従を終了する。
+            if (_rideTrackingActive)
+            {
+                if (_rideTarget == null) EndRideTracking();
+                else if (_meshObj != null && _meshObj.transform != transform)
+                {
+                    _meshObj.transform.position = _rideTarget.position + _rideOffset + _rideMeshWorldOffset;
+                    // モデル固有の向きの補正を保ち、台車の水平回転に合わせる。
+                    _meshObj.transform.rotation = _rideTarget.rotation * _rideMeshRotationOffset;
+                }
+            }
 
             // Localでの処理にInputを送る
             if (HasInputAuthority)
@@ -142,15 +190,22 @@ namespace InGame.Player
                     _cameraController.CameraReset();
                 }
 
-                _cameraController.RotateCamera(GameInput.I.Player.Look.ReadValue<Vector2>(), Time.deltaTime);
+                if (ShouldTrackLockOnTarget(out Transform target))
+                    _cameraController.RotateCameraYawTowards(target.position, Time.deltaTime);
+                else
+                    _cameraController.RotateCamera(GameInput.I.Player.Look.ReadValue<Vector2>(), Time.deltaTime);
             }
         }
 
         public override void FixedUpdateNetwork()
         {
+            // 乗車中・気絶中・入力欠落中も回避スタミナの回復を進める。
+            if (HasStateAuthority || HasInputAuthority)
+                _playerMovement.UpdateEvasionStamina();
+
             if (HasStateAuthority)
             {
-                if (_stunTickTimer.Expired(Runner) && IsStun)
+                if (StunTickTimer.Expired(Runner) && IsStun)
                 {
                     Restart();
                 }
@@ -159,6 +214,8 @@ namespace InGame.Player
             // プレイヤーの入力の管理
             if (_playerInputManager != null && _playerInputManager.GetPlayerInput(out var input))
             {
+                UpdateLockOn(input);
+
                 if (!IsStun && IsMovable && CurrentPlayerControlState == PlayerControlState.Normal)
                 {
                     // player movement に入力を与えて更新する_playerInputManager
@@ -166,12 +223,21 @@ namespace InGame.Player
                         input.CameraYaw, input.Buttons.WasPressed(PreviousButtons, PlayerButtons.Jump), input.Buttons.WasPressed(PreviousButtons, PlayerButtons.Evasion), Runner.DeltaTime);
                 }
 
-                _playerMovement.MoveTick(Runner.DeltaTime);
+                // 乗車中は台車に移動を任せ、それ以外は接地・落下・速度を更新する。
+                if (!_rideTrackingActive)
+                    _playerMovement.MoveTick(Runner.DeltaTime);
 
                 if (input.Buttons.WasPressed(PreviousButtons, PlayerButtons.Warp))
                 {
                     Respawn();
                 }
+            }
+            else if (HasStateAuthority)
+            {
+                // Ground probing and gravity must also run while input is missing.
+                // 入力がない場合も、乗車中以外はホスト側で移動更新を継続する。
+                if (!_rideTrackingActive)
+                    _playerMovement.MoveTick(Runner.DeltaTime);
             }
 
             if (_shouldWarp)
@@ -185,8 +251,130 @@ namespace InGame.Player
 
         }
 
+        /// <summary>
+        /// ロックオン入力と対象の有効性を更新する
+        /// </summary>
+        private void UpdateLockOn(PlayerInput input)
+        {
+            // キャラクター固有のエイム能力に関係なく、入力中と搭乗中は解除する。
+            if (input.Buttons.IsSet(PlayerButtons.Aim)
+                || CurrentPlayerControlState != PlayerControlState.Normal)
+            {
+                DisableLockOn();
+                return;
+            }
+
+            if (input.Buttons.WasPressed(PreviousButtons, PlayerButtons.LockOn)
+                && !IsStun
+                && IsMovable
+                && CurrentPlayerControlState == PlayerControlState.Normal)
+            {
+                if (IsLockOnActive)
+                    DisableLockOn();
+                else
+                    EnableLockOn();
+            }
+
+            if (IsLockOnActive
+                && (!TryGetLockOnTarget(out Transform target) || IsOutsideLockOnVerticalRange(target)))
+            {
+                DisableLockOn();
+            }
+        }
+
+        private bool ShouldTrackLockOnTarget(out Transform target)
+        {
+            target = null;
+            return IsLockOnActive
+                && !GameInput.I.Player.Aim.IsPressed()
+                && !IsStun
+                && IsMovable
+                && CurrentPlayerControlState == PlayerControlState.Normal
+                && !_playerMovement.IgnoreMoveInput
+                && !_playerMovement.IsEvading
+                && !_playerMovement.DoingVault
+                && !_playerMovement.IsHookLocked
+                && TryGetLockOnTarget(out target)
+                && !IsOutsideLockOnVerticalRange(target);
+        }
+
+        private void EnableLockOn()
+        {
+            NetworkObject target = FindClosestLockOnTarget();
+            if (!target)
+                return;
+
+            LockOnTargetId = target.Id;
+            IsLockOnActive = true;
+        }
+
+        private void DisableLockOn()
+        {
+            IsLockOnActive = false;
+            LockOnTargetId = default;
+        }
+
+        private bool TryGetLockOnTarget(out Transform target)
+        {
+            target = null;
+            if (LockOnTargetId == default
+                || Runner == null
+                || !Runner.TryFindObject(LockOnTargetId, out NetworkObject targetObject)
+                || !IsValidLockOnTarget(targetObject))
+            {
+                return false;
+            }
+
+            target = targetObject.transform;
+            return true;
+        }
+
+        private NetworkObject FindClosestLockOnTarget()
+        {
+            if (!StaticServiceLocator.Instance.TryGet(out InGameManager inGameManager))
+                return null;
+
+            float closestSqrDistance = _lockOnSearchRadius * _lockOnSearchRadius;
+            NetworkObject closestTarget = null;
+            foreach (NetworkObject target in inGameManager.PlayerDataDic.Values)
+            {
+                if (!IsValidLockOnTarget(target)
+                    || IsOutsideLockOnVerticalRange(target.transform))
+                    continue;
+
+                Vector3 targetOffset = target.transform.position - transform.position;
+                targetOffset.y = 0f;
+                float sqrDistance = targetOffset.sqrMagnitude;
+                if (sqrDistance >= closestSqrDistance)
+                    continue;
+
+                closestSqrDistance = sqrDistance;
+                closestTarget = target;
+            }
+
+            return closestTarget;
+        }
+
+        private bool IsOutsideLockOnVerticalRange(Transform target)
+        {
+            return Mathf.Abs(target.position.y - transform.position.y) > _lockOnVerticalRange;
+        }
+
+        private bool IsValidLockOnTarget(NetworkObject target)
+        {
+            if (!target || target == Object || !target.gameObject.activeInHierarchy)
+                return false;
+
+            return target.TryGetComponent(out PlayerManager targetPlayer) && !targetPlayer.IsStun;
+        }
+
         public void AfterTick()
         {
+            // 追従対象が破棄されたら即時終了
+            if (_rideTrackingActive && _rideTarget == null) EndRideTracking();
+            // 乗り物の移動・物理更新後に、入力の有無や処理順に左右されず本体を追従させる。
+            UpdateRideTracking();
+
             PreviousButtons = GetInput<PlayerInput>().GetValueOrDefault().Buttons;
         }
 
@@ -202,15 +390,19 @@ namespace InGame.Player
         void OnDeath(HitData lastHitData)
         {
             _playerHealth.IsInvincible = true;
-            IsStun = true;
             // ビルドの減衰分を乗算
-            _stunTickTimer = TickTimer.CreateFromSeconds(Runner, _stunTime * (_playerStatus ? _playerStatus.StunDurationMultiply : 1));
+            StunTickTimer = TickTimer.CreateFromSeconds(Runner, _stunTime * (_playerStatus ? _playerStatus.StunDurationMultiply : 1));
+            IsStun = true;
             _playerEffectController.PlayStunEffect();
         }
 
         public void SetControlState(PlayerControlState controlState)
         {
             CurrentPlayerControlState = controlState;
+
+            // 入力が届かない Tick でも搭乗時のロックオンを持ち越さない。
+            if (CurrentPlayerControlState != PlayerControlState.Normal)
+                DisableLockOn();
 
             if (CurrentPlayerControlState == PlayerControlState.ForcedControl)
             {
@@ -252,12 +444,25 @@ namespace InGame.Player
                 _defaultConstraints;
         }
 
+        [Rpc(RpcSources.All, RpcTargets.All)]
+        public void RPC_SetInvisible(NetworkBool active)
+        {
+            SetControlState(active ? PlayerControlState.ForcedControl : PlayerControlState.Normal);
+            _colliderObj.SetActive(!active);
+            _meshObj.SetActive(!active);
+            _rigidbody.useGravity = !active;
+            _rigidbody.constraints = active ?
+                RigidbodyConstraints.FreezePosition | RigidbodyConstraints.FreezeRotation :
+                _defaultConstraints;
+        }
+
         /// <summary> 非常用リスポーン </summary>
         void Respawn()
         {
             if (!HasStateAuthority) return;
 
             _playerMovement.TeleportImmediate(_respawnPosition);
+            Debug.Log($"[PlayerRespawn] {Object.InputAuthority}: returned to initial spawn {_respawnPosition}", this);
 
             //タニヒラ用の処理を追記
             if (this.gameObject.TryGetComponent<FormationManager>(out FormationManager formationManager))
@@ -266,8 +471,8 @@ namespace InGame.Player
             }
         }
 
-        /// <summary> スタンの経過時間を取得する </summary>
-        public float GetRemainingStunTime => _stunTickTimer.RemainingTime(Runner) ?? 0;
+        /// <summary> スタンの残り時間を取得する </summary>
+        public float GetRemainingStunTime => StunTickTimer.RemainingTime(Runner) ?? 0;
 
         public virtual bool GetPlayerInput(out PlayerInput input)
         {

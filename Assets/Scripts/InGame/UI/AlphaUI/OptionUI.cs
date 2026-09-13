@@ -1,4 +1,6 @@
-﻿using NaughtyAttributes;
+﻿using System.Collections.Generic;
+using System.Linq;
+using NaughtyAttributes;
 using September.Common;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -8,11 +10,13 @@ namespace InGame.UI
 {
     public class OptionUI : MonoBehaviour
     {
-        [SerializeField, Label("表示非表示させるUI")] private GameObject _optionUIPanel;
+        [SerializeField, Label("表示非表示させるUI")] private CanvasGroup _optionUIPanel;
         [SerializeField, Label("表示時に選択するUI")] private Selectable _selectWhenOpen;
 
         private GameInput _gameInput;
         private bool _isShow;
+
+        private HashSet<GameObject> _childSelectables;
 
         private void Start()
         {
@@ -21,10 +25,10 @@ namespace InGame.UI
 
         private void Initialize()
         {
-            _optionUIPanel.SetActive(false);
+            _childSelectables = GetComponentsInChildren<Selectable>().Select(x => x.gameObject).ToHashSet();
             _gameInput = GameInput.I;
+            Show(false);
         }
-
 
         private void Update()
         {
@@ -44,8 +48,13 @@ namespace InGame.UI
         public void Show(bool isShow)
         {
             _isShow = isShow;
+
             if (_optionUIPanel)
-                _optionUIPanel.SetActive(_isShow);
+            {
+                _optionUIPanel.alpha = isShow ? 1 : 0;
+                _optionUIPanel.interactable = isShow;
+                _optionUIPanel.blocksRaycasts = isShow;
+            }
             
             if (_gameInput != null)
                 _gameInput.IsInputBlockedByUI = _isShow;
@@ -65,6 +74,12 @@ namespace InGame.UI
             else
             {
                 CursorStateManager.HideCursor();
+            }
+
+            if (!_isShow && _childSelectables.Contains(EventSystem.current.currentSelectedGameObject))
+            {
+                // 非アクティブにするだけだと選択解除されないので明示的に行う
+                EventSystem.current.SetSelectedGameObject(null);
             }
         }
 

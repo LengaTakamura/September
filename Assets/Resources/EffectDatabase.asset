@@ -97,3 +97,24 @@ MonoBehaviour:
   - EffectType: 30
     Guid: a3026d333af22fe45a3895af3047bfc3
     Prefab: {fileID: 5289488544419552294, guid: a3026d333af22fe45a3895af3047bfc3, type: 3}
+  - EffectType: 31
+    Guid: b97ee30169548be498f31215391073b2
+    Prefab: {fileID: 1419666241058372532, guid: b97ee30169548be498f31215391073b2, type: 3}
+  - EffectType: 32
+    Guid: 5f8829de17bed694dbba6fa6ee7dd0d6
+    Prefab: {fileID: 7898169137976425565, guid: 5f8829de17bed694dbba6fa6ee7dd0d6, type: 3}
+  - EffectType: 33
+    Guid: 1f94a7fade7f38840af0b09b6b9b36dd
+    Prefab: {fileID: 3118872047831750776, guid: 1f94a7fade7f38840af0b09b6b9b36dd, type: 3}
+  - EffectType: 34
+    Guid: 97db345cb3d6c2848aea033349f71f4b
+    Prefab: {fileID: 2994536480912289278, guid: 97db345cb3d6c2848aea033349f71f4b, type: 3}
+  - EffectType: 35
+    Guid: 312e833c7e2866740be7522f92590c83
+    Prefab: {fileID: 6132564183074990948, guid: 312e833c7e2866740be7522f92590c83, type: 3}
+  - EffectType: 36
+    Guid: 8cebae4743180a8429db474f300421e1
+    Prefab: {fileID: 6078561214778955536, guid: 8cebae4743180a8429db474f300421e1, type: 3}
+  - EffectType: 37
+    Guid: db5b471593b188b47a91d49c845acf98
+    Prefab: {fileID: 3853176062880064669, guid: db5b471593b188b47a91d49c845acf98, type: 3}

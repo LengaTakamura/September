@@ -2,9 +2,7 @@ using System;
 using System.Collections.Generic;
 using Fusion;
 using Fusion.Sockets;
-using UnityEditor;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 namespace September.Common
 {
@@ -17,13 +15,13 @@ namespace September.Common
         Aim,
         Ability1,
         Ability2,
-        Ability3,
         Ultimate,
         Warp,
         AirplaneForward,
         AirPlaneBack,
         Shooting,
-        Evasion
+        Evasion,
+        LockOn
     }
 
     public struct PlayerInput : INetworkInput
@@ -78,15 +76,17 @@ namespace September.Common
                 var playerActions = GameInput.I.Player;
                 //  Input Actionからデータを取り出してネットワークに登録する（有効化されている場合のみ）
 
-                // 移動関連の入力（Move、Jump、Dash、Aim）
+                // エイムによるロックオン禁止は、移動入力の有効状態に依存させない。
+                playerInput.Buttons.Set(PlayerButtons.Aim, playerActions.Aim.IsPressed());
+
+                // 移動関連の入力（Move、Jump、Dash、Evasion）
                 if (playerActions.Move.enabled)
                 {
                     playerInput.MoveDirection = playerActions.Move.ReadValue<Vector2>();
                     playerInput.LookDirection = playerActions.Look.ReadValue<Vector2>();
                     playerInput.Buttons.Set(PlayerButtons.Jump, playerActions.Jump.IsPressed());
-                    playerInput.Buttons.Set(PlayerButtons.Dash, playerActions.Dash.IsPressed());
-                    playerInput.Buttons.Set(PlayerButtons.Aim, playerActions.Aim.IsPressed());
-                    playerInput.Buttons.Set(PlayerButtons.Evasion, playerActions.Ability2.IsPressed());
+                    playerInput.Buttons.Set(PlayerButtons.Dash, true); // 常にダッシュ（仮）
+                    playerInput.Buttons.Set(PlayerButtons.Evasion, playerActions.Dash.IsPressed());
                 }
                 else
                 {
@@ -94,7 +94,7 @@ namespace September.Common
                     playerInput.LookDirection = Vector2.zero;
                     playerInput.Buttons.Set(PlayerButtons.Jump, false);
                     playerInput.Buttons.Set(PlayerButtons.Dash, false);
-                    playerInput.Buttons.Set(PlayerButtons.Aim, false);
+                    playerInput.Buttons.Set(PlayerButtons.Evasion, false);
                 }
 
                 // アクション関連の入力
@@ -103,18 +103,18 @@ namespace September.Common
                     playerInput.Buttons.Set(PlayerButtons.Attack, playerActions.Attack.IsPressed());
                     playerInput.Buttons.Set(PlayerButtons.Ability1, playerActions.Ability1.IsPressed());
                     playerInput.Buttons.Set(PlayerButtons.Ability2, playerActions.Ability2.IsPressed());
-                    playerInput.Buttons.Set(PlayerButtons.Ability3, playerActions.Ability3.IsPressed());
                     playerInput.Buttons.Set(PlayerButtons.Interact, playerActions.Interact.IsPressed());
                     playerInput.Buttons.Set(PlayerButtons.Shooting, playerActions.Shooting.IsPressed());
+                    playerInput.Buttons.Set(PlayerButtons.LockOn, playerActions.LockOn.IsPressed());
                 }
                 else
                 {
                     playerInput.Buttons.Set(PlayerButtons.Attack, false);
                     playerInput.Buttons.Set(PlayerButtons.Ability1, false);
                     playerInput.Buttons.Set(PlayerButtons.Ability2, false);
-                    playerInput.Buttons.Set(PlayerButtons.Ability3, false);
                     playerInput.Buttons.Set(PlayerButtons.Interact, false);
                     playerInput.Buttons.Set(PlayerButtons.Shooting, false);
+                    playerInput.Buttons.Set(PlayerButtons.LockOn, false);
                 }
 
                 // その他の入力（常に有効）
