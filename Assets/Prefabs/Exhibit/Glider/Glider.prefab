@@ -448,6 +448,8 @@ MonoBehaviour:
   _characterEffects:
   - rid: 3743209559181754454
   _type: 22
+  _interactPositionOffset: {x: 0, y: 0, z: 0}
+  _interactAreaCollider: {fileID: 0}
   _interactEffectOffset: {x: 0, y: 0, z: 0}
   _cooldownEffectTransform: {fileID: 0}
   _cooldownEffectOffset: {x: 0, y: 0, z: 0}
@@ -878,7 +880,7 @@ BoxCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 1
+  m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3

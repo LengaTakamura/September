@@ -73,3 +73,6 @@ MonoBehaviour:
   - Type: 21
     Points: 150
     DestroyPoints: 0
+  - Type: 22
+    Points: 150
+    DestroyPoints: 0
