@@ -11,6 +11,7 @@ namespace InGame.Player
     {
         [SerializeField] private float _coolTime;
         [SerializeField] private PlayerManager _playerManager;
+        [SerializeField] private GameObject _splashEffectPrefab;
 
         [Networked, OnChangedRender(nameof(OnOutFieldStateChanged))]
         private bool IsOutField { get; set; }
@@ -38,9 +39,29 @@ namespace InGame.Player
 
             if (IsOutField)
             {
+                PlaySplashEffect();
                 OnOutFieldEvent?.Invoke();
                 RespawnAsync().Forget();
             }
+        }
+
+        private void PlaySplashEffect()
+        {
+            if (_splashEffectPrefab == null) return;
+
+            Vector3 splashPosition = transform.position;
+
+            GameObject splashEffect = Instantiate(_splashEffectPrefab, splashPosition, Quaternion.identity);
+            ParticleSystem rootParticleSystem = splashEffect.GetComponent<ParticleSystem>();
+            if (rootParticleSystem == null)
+            {
+                Debug.LogWarning("[PlayerRespawn] 水しぶきエフェクトのルートにParticleSystemがありません。", splashEffect);
+                Destroy(splashEffect);
+                return;
+            }
+
+            var main = rootParticleSystem.main;
+            main.stopAction = ParticleSystemStopAction.Destroy;
         }
 
         private async UniTaskVoid RespawnAsync()
